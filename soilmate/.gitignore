@@ -1,0 +1,22 @@
+# Environment / secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Uploaded soil images (runtime user data)
+static/uploads/*
+!static/uploads/.gitkeep
+
+# Model weights & large datasets
+*.pth
+*.zip
+data/
+soilmate/data/
+
+# Cache & tests
+.pytest_cache/
+.vscode/

@@ -1,0 +1,1037 @@
+const chatFeed = document.getElementById('chatFeed');
+const chatForm = document.getElementById('chatForm');
+const userInput = document.getElementById('userInput');
+const soilImageInput = document.getElementById('soilImageInput');
+const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+const imagePreview = document.getElementById('imagePreview');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const chatImageInput = document.getElementById('chatImageInput');
+const chatCameraBtn = document.getElementById('chatCameraBtn');
+const plantNowBtn = document.getElementById('plantNowBtn');
+
+let selectedFile = null;
+let lastSoilType = null;
+
+// Stable per-browser id so the chatbot can remember context between turns
+// (e.g. "how much compost for THIS soil?").
+const SESSION_ID = (() => {
+    let id = localStorage.getItem('soilmate_session');
+    if (!id) {
+        id = (window.crypto && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : 's-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+        localStorage.setItem('soilmate_session', id);
+    }
+    return id;
+})();
+
+// ------------------------- THEME -------------------------
+const THEME_KEY = 'soilmate_theme';
+const themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+
+function themeIsDark() {
+    return document.documentElement.classList.contains('dark');
+}
+
+function syncThemeButtons() {
+    const dark = themeIsDark();
+    const label = dark ? 'Switch to light mode' : 'Switch to dark mode';
+    document.querySelectorAll('[data-theme-toggle]').forEach(btn => {
+        btn.setAttribute('aria-pressed', String(dark));
+        btn.setAttribute('aria-label', label);
+        btn.title = label;
+    });
+}
+
+// persist=false is used when following the OS preference instead of a user choice.
+function setTheme(dark, persist = true) {
+    document.documentElement.classList.toggle('dark', dark);
+    if (persist) localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
+    syncThemeButtons();
+}
+
+document.querySelectorAll('[data-theme-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => setTheme(!themeIsDark()));
+});
+
+themeMedia.addEventListener('change', (event) => {
+    if (!localStorage.getItem(THEME_KEY)) setTheme(event.matches, false);
+});
+
+syncThemeButtons();
+
+// Escape user-supplied text before adding the small amount of markdown we support.
+function escapeHtml(text) {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatInline(text) {
+    return text
+        .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>')
+        .replace(/\*([^*\n]+)\*/g, '<em class="italic text-slate-600 dark:text-slate-300">$1</em>');
+}
+
+// Convert our small markdown subset into tidy paragraphs and lists.
+function formatMarkdown(text) {
+    if (!text) return '';
+
+    const lines = escapeHtml(text).replace(/\r\n?/g, '\n').split('\n');
+    const html = [];
+    let paragraph = [];
+    let listType = null;
+    let listItems = [];
+
+    const flushParagraph = () => {
+        if (!paragraph.length) return;
+        html.push(`<p class="mb-2 last:mb-0">${formatInline(paragraph.join(' '))}</p>`);
+        paragraph = [];
+    };
+
+    const flushList = () => {
+        if (!listType) return;
+        const tag = listType === 'ol' ? 'ol' : 'ul';
+        const className = listType === 'ol'
+            ? 'list-decimal pl-5 space-y-1 my-2 marker:text-emerald-600 dark:marker:text-emerald-400'
+            : 'list-disc pl-5 space-y-1 my-2 marker:text-emerald-600 dark:marker:text-emerald-400';
+        html.push(
+            `<${tag} class="${className}">` +
+            listItems.map(item => `<li>${formatInline(item)}</li>`).join('') +
+            `</${tag}>`
+        );
+        listType = null;
+        listItems = [];
+    };
+
+    for (const rawLine of lines) {
+        const line = rawLine.trim();
+
+        if (!line) {
+            flushParagraph();
+            flushList();
+            continue;
+        }
+
+        const unordered = line.match(/^[-*]\s+(.*)$/);
+        const ordered = line.match(/^\d+[.)]\s+(.*)$/);
+
+        if (unordered || ordered) {
+            flushParagraph();
+            const nextType = ordered ? 'ol' : 'ul';
+            if (listType && listType !== nextType) flushList();
+            listType = nextType;
+            listItems.push((ordered || unordered)[1]);
+            continue;
+        }
+
+        flushList();
+        paragraph.push(line);
+    }
+
+    flushParagraph();
+    flushList();
+    return html.join('');
+}
+
+// Append message bubble to chat
+function appendMessage(sender, content, isHtml = false) {
+    const wrapper = document.createElement('div');
+    wrapper.className = sender === 'user'
+        ? 'flex gap-3 justify-end'
+        : 'flex gap-3 max-w-2xl';
+
+    const bubble = document.createElement('div');
+    bubble.className = sender === 'user'
+        ? 'bg-emerald-700 dark:bg-emerald-600 text-white p-3 sm:p-4 rounded-2xl rounded-tr-none text-sm shadow-xs break-words max-w-[85%]'
+        : 'bg-white text-slate-800 p-3 sm:p-4 rounded-2xl rounded-tl-none border border-slate-200 text-sm shadow-xs leading-relaxed break-words min-w-0 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700';
+
+    if (isHtml) {
+        bubble.innerHTML = content;
+    } else {
+        bubble.innerHTML = formatMarkdown(content);
+    }
+
+    wrapper.appendChild(bubble);
+    chatFeed.appendChild(wrapper);
+    chatFeed.scrollTop = chatFeed.scrollHeight;
+}
+
+// Compact, collapsible crop list shared by the analysis and planting cards.
+let cropGroupCounter = 0;
+
+function renderCropGrid(crops, emptyMessage) {
+    if (!crops || !crops.length) {
+        return `<p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3 dark:text-slate-400 dark:bg-slate-800/60 dark:border-slate-700">${emptyMessage}</p>`;
+    }
+
+    const groupId = `crop-group-${++cropGroupCounter}`;
+    const visibleCount = 6;
+
+    const cards = crops.map((c, index) => {
+        const isExtra = index >= visibleCount;
+        const extraClass = isExtra ? ' hidden' : '';
+        const extraAttr = isExtra ? ` data-crop-extra="${groupId}"` : '';
+        const local = escapeHtml(c.local_name || c.category || 'Philippine crop');
+        const season = escapeHtml(c.ideal_planting_season || 'Year-round');
+
+        return `
+            <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 dark:bg-emerald-950/40 dark:border-emerald-900${extraClass}"${extraAttr}>
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="font-bold text-emerald-950 text-sm truncate dark:text-emerald-100">${escapeHtml(c.common_name)}</p>
+                        <p class="text-[11px] text-emerald-700/80 truncate dark:text-emerald-300/80">${local}</p>
+                    </div>
+                    ${c.in_season_now ? '<span class="shrink-0 text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-semibold dark:bg-amber-900/50 dark:text-amber-200">In season</span>' : ''}
+                </div>
+                <div class="mt-2 space-y-0.5 text-[11px] text-slate-600 dark:text-slate-400">
+                    <p><strong class="text-slate-700 dark:text-slate-300">Harvest:</strong> ${c.harvest_days_min}–${c.harvest_days_max} days</p>
+                    <p class="truncate" title="${season}"><strong class="text-slate-700 dark:text-slate-300">Season:</strong> ${season}</p>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    const toggle = crops.length > visibleCount
+        ? `<button type="button" data-show-crops="${groupId}" data-total="${crops.length}" aria-expanded="false"
+                   class="mt-2 w-full sm:w-auto text-xs font-semibold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 px-3 py-2 rounded-xl transition dark:text-emerald-300 dark:hover:text-emerald-200 dark:bg-emerald-900/40 dark:hover:bg-emerald-900/70 dark:border-emerald-800">
+               Show all ${crops.length} crops
+           </button>`
+        : '';
+
+    return `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${cards}</div>${toggle}`;
+}
+
+chatFeed.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-show-crops]');
+    if (!button) return;
+
+    const groupId = button.dataset.showCrops;
+    const extras = chatFeed.querySelectorAll(`[data-crop-extra="${groupId}"]`);
+    if (!extras.length) return;
+
+    const willShow = extras[0].classList.contains('hidden');
+    extras.forEach(item => item.classList.toggle('hidden', !willShow));
+    button.textContent = willShow ? 'Show fewer crops' : `Show all ${button.dataset.total} crops`;
+    button.setAttribute('aria-expanded', String(willShow));
+});
+
+// Generate a clean HTML card for the soil analysis results
+function renderSoilAnalysisCard(data) {
+    const recommendations = data.recommendations || [];
+    const cropsHtml = renderCropGrid(recommendations, 'No specific crops mapped to this profile yet.');
+
+    return `
+        <div class="space-y-3">
+            <div class="flex items-center justify-between gap-2 flex-wrap border-b border-slate-100 pb-2 dark:border-slate-800">
+                <span class="font-bold text-base text-slate-900 dark:text-white">Soil Analysis Result</span>
+                <span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-semibold dark:bg-emerald-900/60 dark:text-emerald-200">
+                    ${(data.confidence * 100).toFixed(0)}% Confidence
+                </span>
+            </div>
+
+            <div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Detected Soil</span>
+                <p class="font-bold text-emerald-800 text-lg dark:text-emerald-300">${data.soil_type}</p>
+                <p class="text-xs text-slate-600 mt-0.5 dark:text-slate-400">${data.description}</p>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200/80 p-3 rounded-xl text-xs text-amber-900 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-200">
+                <strong class="font-bold block mb-1">Soil Improvement Tip:</strong>
+                ${data.improvement_tips}
+            </div>
+
+            <div class="pt-1">
+                <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Recommended Crops (Philippines)</span>
+                    <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full dark:text-emerald-300 dark:bg-emerald-900/40 dark:border-emerald-800">
+                        ${recommendations.length} matches
+                    </span>
+                </div>
+                ${cropsHtml}
+            </div>
+        </div>
+    `;
+}
+
+const UNIDENTIFIED_TITLES = {
+    low_confidence: 'Soil Unrecognized',
+    too_small: 'Photo Too Small',
+    too_dark: 'Photo Too Dark',
+    too_bright: 'Photo Too Bright',
+    flat: 'Photo Lacks Detail',
+    not_soil: "This Doesn't Look Like Soil",
+};
+
+function renderUnidentifiedCard(data) {
+    const title = UNIDENTIFIED_TITLES[data.reason] || 'Soil Unrecognized';
+
+    const tips = (data.tips && data.tips.length)
+        ? `<div class="bg-slate-50 border border-slate-200 p-2 rounded-lg dark:bg-slate-800/60 dark:border-slate-700">
+               <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1 dark:text-slate-400">Try this</p>
+               <ul class="text-xs text-slate-600 list-disc pl-4 space-y-0.5 dark:text-slate-300">
+                   ${data.tips.map(t => `<li>${t}</li>`).join('')}
+               </ul>
+           </div>`
+        : '';
+
+    const confidence = data.reason === 'low_confidence'
+        ? `<div class="text-[11px] text-slate-400 bg-slate-100 p-2 rounded-lg dark:text-slate-400 dark:bg-slate-800">
+               Confidence score (${((data.confidence || 0) * 100).toFixed(1)}%) is below the required 75% threshold.
+           </div>`
+        : '';
+
+    return `
+        <div class="space-y-2">
+            <div class="flex items-center gap-2 text-amber-700 font-bold dark:text-amber-300">
+                <span>${title}</span>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed dark:text-slate-400">${data.message}</p>
+            ${tips}
+            ${confidence}
+        </div>
+    `;
+}
+
+// Send one chat message to the bot (used by the form and by suggestion chips)
+async function sendMessage(text) {
+    text = (text || '').trim();
+    if (!text) return;
+
+    appendMessage('user', text);
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text, session_id: SESSION_ID, soil_type: lastSoilType })
+        });
+        const data = await res.json();
+        appendMessage('bot', data.reply);
+        appendSuggestions(data.suggestions);
+
+        // Signed-in chats are saved, so clearing history becomes available.
+        if (isAuthenticatedUser) {
+            hasSavedChats = true;
+            setClearHistoryVisible(true);
+        }
+    } catch (err) {
+        appendMessage('bot', 'Error communicating with server.');
+    }
+}
+
+// Render clickable follow-up chips under a bot reply
+function appendSuggestions(suggestions) {
+    if (!suggestions || !suggestions.length) return;
+
+    const row = document.createElement('div');
+    row.className = 'flex flex-wrap gap-2 pl-11 pt-1';
+
+    suggestions.forEach(text => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'text-xs bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-50 px-3 py-1.5 rounded-full transition shadow-xs dark:bg-slate-900 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900/40';
+        btn.textContent = text;
+        btn.addEventListener('click', () => sendMessage(text));
+        row.appendChild(btn);
+    });
+
+    chatFeed.appendChild(row);
+    chatFeed.scrollTop = chatFeed.scrollHeight;
+}
+
+// Text Chat Submission
+chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = userInput.value.trim();
+    if (!text) return;
+    userInput.value = '';
+    sendMessage(text);
+});
+
+// Image Selection Preview
+soilImageInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        selectedFile = file;
+        imagePreview.src = URL.createObjectURL(file);
+        imagePreviewContainer.classList.remove('hidden');
+    }
+});
+
+// Image Analysis Trigger (sidebar button and chat camera button share this)
+async function analyzeSelectedImage() {
+    if (!selectedFile) return;
+
+    closeSidebar();
+    appendMessage('user', `Uploaded image: <strong>${selectedFile.name}</strong> for soil diagnosis.`, true);
+    appendMessage('bot', 'Analyzing soil texture using trained neural network...');
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+    formData.append('session_id', SESSION_ID);
+
+    try {
+        const res = await fetch('/api/predict-soil', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+
+        // 1. Check if the server had a crash/error
+        if (!res.ok || data.error) {
+            appendMessage('bot', `<strong>Server Error:</strong> ${data.error || 'Server returned an error'}`, true);
+            return;
+        }
+
+        // 2. Check if the photo could not be turned into a reliable prediction
+        if (data.identified === false) {
+            appendMessage('bot', renderUnidentifiedCard(data), true);
+            refreshScans();
+            return;
+        }
+
+        // 3. Success: Render the full recommendation card
+        lastSoilType = data.soil_type;
+        const cardHtml = renderSoilAnalysisCard(data);
+        appendMessage('bot', cardHtml, true);
+        refreshScans();
+
+    } catch (err) {
+        appendMessage('bot', `Failed to communicate with server: ${err.message}`);
+    }
+}
+
+analyzeBtn.addEventListener('click', analyzeSelectedImage);
+
+// Camera option before the chat input: take/select a photo and analyze immediately.
+chatCameraBtn.addEventListener('click', () => chatImageInput.click());
+
+chatImageInput.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    selectedFile = file;
+    imagePreview.src = URL.createObjectURL(file);
+    imagePreviewContainer.classList.remove('hidden');
+    analyzeSelectedImage();
+    chatImageInput.value = '';
+});
+
+// Generate a card for the monthly planting calendar
+function renderPlantingCard(data) {
+    const crops = data.crops || [];
+    const cropsHtml = renderCropGrid(crops, 'No crops are listed for this month yet.');
+
+    return `
+        <div class="space-y-3">
+            <div class="flex items-center justify-between gap-2 flex-wrap border-b border-slate-100 pb-2 dark:border-slate-800">
+                <span class="font-bold text-base text-slate-900 dark:text-white">What to Plant in ${data.month_name}</span>
+                <span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-semibold dark:bg-emerald-900/60 dark:text-emerald-200">${data.season}</span>
+            </div>
+
+            ${data.filtered_by_soil ? `<p class="text-xs text-slate-500 dark:text-slate-400">Filtered for your <strong>${data.soil_type}</strong>.</p>` : ''}
+            ${data.note ? `<p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded-lg dark:text-amber-200 dark:bg-amber-950/40 dark:border-amber-900">${data.note}</p>` : ''}
+
+            <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Recommended crops</span>
+                <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full dark:text-emerald-300 dark:bg-emerald-900/40 dark:border-emerald-800">
+                    ${crops.length} options
+                </span>
+            </div>
+            ${cropsHtml}
+
+            <div class="bg-amber-50 border border-amber-200/80 p-3 rounded-xl text-xs text-amber-900 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-200">
+                <strong class="font-bold block mb-1">Season Tip:</strong>
+                ${data.season_tip}
+            </div>
+        </div>
+    `;
+}
+
+// Monthly planting calendar (shared by the sidebar button and the chip)
+async function askPlantNow() {
+    closeSidebar();
+    appendMessage('user', 'What can I plant this month?');
+
+    try {
+        const query = lastSoilType ? `?soil=${encodeURIComponent(lastSoilType)}` : '';
+        const res = await fetch('/api/plant-now' + query);
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+            appendMessage('bot', `<strong>Server Error:</strong> ${data.error || 'Could not load the planting calendar'}`, true);
+            return;
+        }
+
+        appendMessage('bot', renderPlantingCard(data), true);
+    } catch (err) {
+        appendMessage('bot', `Failed to load the planting calendar: ${err.message}`);
+    }
+}
+
+plantNowBtn.addEventListener('click', askPlantNow);
+
+// ------------------------- MOBILE SIDEBAR DRAWER -------------------------
+const sidebarEl = document.getElementById('sidebar');
+const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+const sidebarOpenBtn = document.getElementById('sidebarOpenBtn');
+const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+
+function isMobileLayout() {
+    return window.matchMedia('(max-width: 767.98px)').matches;
+}
+
+function openSidebar() {
+    if (!isMobileLayout()) return;
+    sidebarEl.classList.remove('-translate-x-full');
+    sidebarEl.classList.add('translate-x-0');
+    sidebarBackdrop.classList.remove('hidden');
+    sidebarOpenBtn.setAttribute('aria-expanded', 'true');
+}
+
+function closeSidebar() {
+    if (!isMobileLayout()) return;
+    sidebarEl.classList.add('-translate-x-full');
+    sidebarEl.classList.remove('translate-x-0');
+    sidebarBackdrop.classList.add('hidden');
+    sidebarOpenBtn.setAttribute('aria-expanded', 'false');
+}
+
+sidebarOpenBtn.addEventListener('click', openSidebar);
+sidebarCloseBtn.addEventListener('click', closeSidebar);
+sidebarBackdrop.addEventListener('click', closeSidebar);
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeSidebar();
+});
+
+// Returning to desktop must never leave the drawer in a half-open state.
+window.addEventListener('resize', () => {
+    if (isMobileLayout()) return;
+    sidebarEl.classList.add('-translate-x-full');
+    sidebarEl.classList.remove('translate-x-0');
+    sidebarBackdrop.classList.add('hidden');
+    sidebarOpenBtn.setAttribute('aria-expanded', 'false');
+});
+
+// ------------------------- QUICK SUGGESTION CHIPS -------------------------
+const QUICK_PROMPTS = [
+    { label: 'What can I plant this month?', action: 'plant' },
+    { label: 'How do I test pH?', text: 'How do I test soil pH?' },
+    { label: 'How to make compost?', text: 'How do I make compost?' },
+    { label: 'Best organic fertilizer?', text: 'What organic fertilizer is best for sandy soil in the Philippines?' },
+    { label: 'Watering schedule', text: 'How often should I water my plants?' },
+];
+
+function renderQuickPrompts() {
+    const wrap = document.getElementById('suggestionChips');
+    if (!wrap) return;
+
+    wrap.innerHTML = '';
+    QUICK_PROMPTS.forEach(prompt => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'text-xs md:text-sm whitespace-nowrap flex-shrink-0 bg-slate-100 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 px-3 py-1.5 rounded-full transition dark:bg-slate-800 dark:hover:bg-emerald-900/40 dark:border-slate-700 dark:hover:border-emerald-700 dark:text-slate-300 dark:hover:text-emerald-200';
+        btn.textContent = prompt.label;
+        btn.addEventListener('click', () => {
+            if (prompt.action === 'plant') askPlantNow();
+            else sendMessage(prompt.text);
+        });
+        wrap.appendChild(btn);
+    });
+}
+
+renderQuickPrompts();
+
+// ------------------------- SCAN & CHAT HISTORY -------------------------
+const scanHistoryEl = document.getElementById('scanHistory');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+
+// Whether the signed-in account has at least one saved chat message.
+let hasSavedChats = false;
+
+function setClearHistoryVisible(visible) {
+    if (!clearHistoryBtn) return;
+    clearHistoryBtn.classList.toggle('hidden', !visible);
+    clearHistoryBtn.classList.toggle('inline-flex', visible);
+}
+
+function renderScanHistory(scans, hasChats = hasSavedChats) {
+    const hasScans = !!(scans && scans.length);
+    setClearHistoryVisible(hasScans || hasChats);
+
+    if (!hasScans) {
+        scanHistoryEl.innerHTML = '<p class="text-xs text-emerald-400">No scans yet.</p>';
+        return;
+    }
+
+    scanHistoryEl.innerHTML = scans.map(s => {
+        const label = escapeHtml(s.identified ? s.predicted_soil : 'Unidentified');
+        const pct = Math.round((s.confidence || 0) * 100);
+        const date = new Date(s.created_at).toLocaleDateString();
+        return `
+            <div class="scan-item relative" data-scan-id="${s.id}">
+                <button type="button"
+                        class="scan-open w-full flex items-center gap-2 bg-emerald-800/60 hover:bg-emerald-800 rounded-lg p-2 pr-9 text-left transition"
+                        data-scan-id="${s.id}">
+                    <img src="/static/uploads/${encodeURIComponent(s.filename)}" alt=""
+                         class="w-10 h-10 object-cover rounded flex-shrink-0">
+                    <span class="flex-1 min-w-0">
+                        <span class="block text-xs font-semibold text-white truncate">${label}</span>
+                        <span class="block text-[11px] text-emerald-300">${pct}% • ${date}</span>
+                    </span>
+                </button>
+                <button type="button"
+                        class="scan-menu-btn absolute top-1.5 right-1.5 p-1 rounded-md text-emerald-200/70 hover:text-white hover:bg-white/15 transition"
+                        data-scan-menu="${s.id}" aria-label="Options for this scan"
+                        aria-haspopup="true" aria-expanded="false">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <circle cx="12" cy="5" r="1.7"/>
+                        <circle cx="12" cy="12" r="1.7"/>
+                        <circle cx="12" cy="19" r="1.7"/>
+                    </svg>
+                </button>
+                <div class="scan-menu hidden absolute right-1.5 top-8 z-20 w-36 rounded-lg bg-white border border-slate-200 shadow-lg py-1"
+                     data-scan-menu-panel="${s.id}">
+                    <button type="button"
+                            class="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition"
+                            data-delete-scan="${s.id}">
+                        Delete scan
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function closeScanMenus() {
+    scanHistoryEl.querySelectorAll('[data-scan-menu-panel]').forEach(panel => {
+        panel.classList.add('hidden');
+    });
+    scanHistoryEl.querySelectorAll('[data-scan-menu]').forEach(btn => {
+        btn.setAttribute('aria-expanded', 'false');
+    });
+}
+
+scanHistoryEl.addEventListener('click', (event) => {
+    const menuBtn = event.target.closest('[data-scan-menu]');
+    if (menuBtn) {
+        const id = menuBtn.dataset.scanMenu;
+        const panel = scanHistoryEl.querySelector(`[data-scan-menu-panel="${id}"]`);
+        const willOpen = !!panel && panel.classList.contains('hidden');
+        closeScanMenus();
+        if (willOpen) {
+            panel.classList.remove('hidden');
+            menuBtn.setAttribute('aria-expanded', 'true');
+        }
+        return;
+    }
+
+    const deleteBtn = event.target.closest('[data-delete-scan]');
+    if (deleteBtn) {
+        closeScanMenus();
+        deleteSingleScan(deleteBtn.dataset.deleteScan);
+        return;
+    }
+
+    const openBtn = event.target.closest('.scan-open');
+    if (openBtn) {
+        closeScanMenus();
+        openScan(openBtn.dataset.scanId);
+    }
+});
+
+// Any click elsewhere, or Escape, dismisses an open row menu.
+document.addEventListener('click', (event) => {
+    if (!scanHistoryEl.contains(event.target)) closeScanMenus();
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeScanMenus();
+});
+
+function renderHistoryLoginPrompt() {
+    setClearHistoryVisible(false);
+    scanHistoryEl.innerHTML = `
+        <div class="rounded-xl border border-dashed border-white/15 py-4 px-3 text-center space-y-2">
+            <p class="text-xs text-emerald-100/60">Log in to save your scan and chat history.</p>
+            <button id="historyLoginBtn" type="button"
+                    class="bg-white/12 hover:bg-white/20 border border-white/15 text-white font-semibold text-xs py-1.5 px-3 rounded-lg transition">
+                Log in
+            </button>
+        </div>
+    `;
+
+    const historyLoginBtn = document.getElementById('historyLoginBtn');
+    if (historyLoginBtn) {
+        historyLoginBtn.addEventListener('click', () => {
+            localStorage.removeItem(GUEST_KEY);
+            showGate('login');
+        });
+    }
+}
+
+async function openScan(scanId) {
+    closeSidebar();
+    try {
+        const res = await fetch(`/api/scans/${scanId}`);
+        const data = await res.json();
+
+        if (res.status === 401) {
+            renderHistoryLoginPrompt();
+            showGate('login');
+            appendMessage('bot', 'Please log in to view saved scans.', true);
+            return;
+        }
+
+        if (!res.ok || data.error) {
+            appendMessage('bot', `<strong>Could not open scan:</strong> ${data.error || 'Unknown error'}`, true);
+            return;
+        }
+
+        if (data.identified === false) {
+            const pct = ((data.confidence || 0) * 100).toFixed(1);
+            appendMessage('bot', `<strong>Previous scan could not be identified.</strong><br>${data.message}<br><span class="text-xs text-slate-400 dark:text-slate-500">Confidence: ${pct}%</span>`, true);
+            return;
+        }
+
+        appendMessage('bot', renderSoilAnalysisCard(data), true);
+    } catch (err) {
+        appendMessage('bot', `Failed to open scan: ${err.message}`);
+    }
+}
+
+async function deleteSingleScan(scanId) {
+    const confirmed = window.confirm(
+        'Delete this scan from your history?\n\nThis cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch(`/api/scans/${scanId}`, { method: 'DELETE' });
+        let data = {};
+        try { data = await res.json(); } catch (err) { /* empty body */ }
+
+        if (res.status === 401) {
+            renderHistoryLoginPrompt();
+            showGate('login');
+            return;
+        }
+
+        if (!res.ok || !data.deleted) {
+            appendMessage('bot', `<strong>Could not delete scan:</strong> ${data.error || 'Please try again.'}`, true);
+            return;
+        }
+
+        await refreshScans();
+        appendMessage('bot', 'That scan has been removed from your history.');
+    } catch (err) {
+        appendMessage('bot', `Failed to delete scan: ${err.message}`);
+    }
+}
+
+async function clearHistory() {
+    const confirmed = window.confirm(
+        'Delete all your saved scans and chat history?\n\nThis cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    clearHistoryBtn.disabled = true;
+    try {
+        const res = await fetch('/api/history', { method: 'DELETE' });
+        let data = {};
+        try { data = await res.json(); } catch (err) { /* empty body */ }
+
+        if (res.status === 401) {
+            renderHistoryLoginPrompt();
+            showGate('login');
+            return;
+        }
+
+        if (!res.ok || !data.deleted) {
+            appendMessage('bot', `<strong>Could not clear history:</strong> ${data.error || 'Please try again.'}`, true);
+            return;
+        }
+
+        hasSavedChats = false;
+        lastSoilType = null;
+        resetFeed();
+        renderScanHistory([]);
+        appendMessage(
+            'bot',
+            `Your history has been cleared. **${data.scans}** scan(s) and **${data.chats}** chat message(s) were deleted.`
+        );
+    } catch (err) {
+        appendMessage('bot', `Failed to clear history: ${err.message}`);
+    } finally {
+        clearHistoryBtn.disabled = false;
+    }
+}
+
+if (clearHistoryBtn) {
+    clearHistoryBtn.addEventListener('click', clearHistory);
+}
+
+async function fetchHistory() {
+    try {
+        const res = await fetch('/api/history');
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (err) {
+        console.error('Could not load history:', err);
+        return null;
+    }
+}
+
+async function refreshScans() {
+    const data = await fetchHistory();
+    if (!data) return;
+    if (data.requires_login) {
+        renderHistoryLoginPrompt();
+        return;
+    }
+    renderScanHistory(data.scans);
+}
+
+async function loadHistory() {
+    const data = await fetchHistory();
+    if (!data) return;
+
+    if (data.requires_login) {
+        renderHistoryLoginPrompt();
+        return;
+    }
+
+    hasSavedChats = !!(data.chats && data.chats.length);
+    renderScanHistory(data.scans, hasSavedChats);
+
+    // Restore the latest soil so suggestions stay personalized after a reload.
+    if (!lastSoilType) {
+        const latest = (data.scans || []).find(s => s.identified);
+        if (latest) lastSoilType = latest.predicted_soil;
+    }
+
+    // Replay the previous conversation so a page refresh does not lose it.
+    (data.chats || []).forEach(m => {
+        appendMessage(m.role === 'user' ? 'user' : 'bot', m.message);
+    });
+}
+
+// ------------------------- ACCOUNT -------------------------
+const authGate = document.getElementById('authGate');
+const authForm = document.getElementById('authForm');
+const tabLogin = document.getElementById('tabLogin');
+const tabRegister = document.getElementById('tabRegister');
+const gateLoginFields = document.getElementById('gateLoginFields');
+const gateRegisterFields = document.getElementById('gateRegisterFields');
+const gateIdentifier = document.getElementById('gateIdentifier');
+const gateUsername = document.getElementById('gateUsername');
+const gateEmail = document.getElementById('gateEmail');
+const gatePassword = document.getElementById('gatePassword');
+const gateMessage = document.getElementById('gateMessage');
+const gateSubmit = document.getElementById('gateSubmit');
+const guestBtn = document.getElementById('guestBtn');
+const headerLoginBtn = document.getElementById('headerLoginBtn');
+const headerLogoutBtn = document.getElementById('headerLogoutBtn');
+const accountAvatar = document.getElementById('accountAvatar');
+const accountName = document.getElementById('accountName');
+const accountState = document.getElementById('accountState');
+
+const GUEST_KEY = 'soilmate_guest';
+const TAB_ACTIVE = 'flex-1 text-sm font-semibold py-2 rounded-lg transition bg-white text-emerald-800 shadow-xs dark:bg-slate-700 dark:text-emerald-200';
+const TAB_INACTIVE = 'flex-1 text-sm font-semibold py-2 rounded-lg transition text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200';
+
+let authMode = 'login';
+
+function setGateMessage(text, isError = true) {
+    gateMessage.textContent = text || '';
+    gateMessage.className = text
+        ? (isError ? 'text-xs text-rose-600 min-h-[1rem] dark:text-rose-400' : 'text-xs text-emerald-700 min-h-[1rem] dark:text-emerald-300')
+        : 'text-xs text-rose-600 min-h-[1rem] dark:text-rose-400';
+}
+
+function setAuthMode(mode) {
+    authMode = mode === 'register' ? 'register' : 'login';
+    const isRegister = authMode === 'register';
+
+    tabLogin.className = isRegister ? TAB_INACTIVE : TAB_ACTIVE;
+    tabRegister.className = isRegister ? TAB_ACTIVE : TAB_INACTIVE;
+    gateLoginFields.classList.toggle('hidden', isRegister);
+    gateRegisterFields.classList.toggle('hidden', !isRegister);
+    gateSubmit.textContent = isRegister ? 'Create account' : 'Log in';
+    gatePassword.setAttribute('autocomplete', isRegister ? 'new-password' : 'current-password');
+
+    setGateMessage('');
+}
+
+function showGate(mode) {
+    setAuthMode(mode || 'login');
+    authGate.classList.remove('hidden');
+    (authMode === 'register' ? gateUsername : gateIdentifier).focus();
+}
+
+function hideGate() {
+    authGate.classList.add('hidden');
+}
+
+// Signed-in state lives in the chat header only, never in the sidebar.
+let isAuthenticatedUser = false;
+
+function updateAccountUI(authenticated, username) {
+    isAuthenticatedUser = !!authenticated;
+    if (authenticated) {
+        const name = username || '';
+        accountName.textContent = name;
+        accountAvatar.textContent = (name.charAt(0) || '?').toUpperCase();
+        accountAvatar.className = 'w-9 h-9 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold text-sm dark:bg-emerald-600';
+        accountState.textContent = 'Signed in';
+        headerLoginBtn.classList.add('hidden');
+        headerLogoutBtn.classList.remove('hidden');
+    } else {
+        accountName.textContent = 'Guest';
+        accountAvatar.textContent = 'G';
+        accountAvatar.className = 'w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm dark:bg-emerald-900 dark:text-emerald-300';
+        accountState.textContent = 'Not signed in';
+        headerLoginBtn.classList.remove('hidden');
+        headerLogoutBtn.classList.add('hidden');
+    }
+}
+
+async function postJson(url, payload) {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {})
+    });
+    let data = {};
+    try { data = await res.json(); } catch (err) { /* empty body */ }
+    return { res, data };
+}
+
+// Keep the welcome bubble, drop everything else, then replay from the server.
+function resetFeed() {
+    while (chatFeed.children.length > 1) {
+        chatFeed.removeChild(chatFeed.lastChild);
+    }
+}
+
+async function refreshAfterAuth() {
+    resetFeed();
+    await loadHistory();
+}
+
+async function submitAuth() {
+    const password = gatePassword.value;
+    let url, payload;
+
+    if (authMode === 'login') {
+        const identifier = gateIdentifier.value.trim();
+        if (!identifier || !password) {
+            setGateMessage('Enter your username or email and password.');
+            return;
+        }
+        url = '/api/login';
+        payload = { username: identifier, password };
+    } else {
+        const username = gateUsername.value.trim();
+        const email = gateEmail.value.trim();
+        if (!username || !email || !password) {
+            setGateMessage('Username, email, and password are all required.');
+            return;
+        }
+        url = '/api/register';
+        payload = { username, email, password };
+    }
+
+    gateSubmit.disabled = true;
+    try {
+        const { res, data } = await postJson(url, payload);
+        if (!res.ok) {
+            setGateMessage(data.error || 'Something went wrong. Please try again.');
+            return;
+        }
+        await onAuthSuccess(data);
+    } catch (err) {
+        setGateMessage('Could not reach the server. Please try again.');
+    } finally {
+        gateSubmit.disabled = false;
+    }
+}
+
+async function onAuthSuccess(data) {
+    localStorage.removeItem(GUEST_KEY);
+    gateIdentifier.value = '';
+    gateUsername.value = '';
+    gateEmail.value = '';
+    gatePassword.value = '';
+    hideGate();
+    updateAccountUI(true, data.username);
+    await refreshAfterAuth();
+    appendMessage('bot', `Welcome, **${data.username}**! Your scans and chats are saved to this account.`);
+}
+
+async function continueAsGuest() {
+    localStorage.setItem(GUEST_KEY, '1');
+    hideGate();
+    updateAccountUI(false);
+    await refreshAfterAuth();
+}
+
+async function logout() {
+    try {
+        await postJson('/api/logout', {});
+    } catch (err) { /* clear the local view regardless */ }
+
+    localStorage.removeItem(GUEST_KEY);
+    updateAccountUI(false);
+    resetFeed();
+    lastSoilType = null;
+
+    // Guest sessions have no saved history
+    renderHistoryLoginPrompt();
+
+    showGate('login');
+}
+
+authForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    submitAuth();
+});
+tabLogin.addEventListener('click', () => setAuthMode('login'));
+tabRegister.addEventListener('click', () => setAuthMode('register'));
+guestBtn.addEventListener('click', continueAsGuest);
+headerLoginBtn.addEventListener('click', () => {
+    localStorage.removeItem(GUEST_KEY);
+    showGate('login');
+});
+headerLogoutBtn.addEventListener('click', logout);
+
+// Start: the login panel comes first unless we already know who this is.
+(async function init() {
+    let authenticated = false;
+    let username = null;
+
+    try {
+        const res = await fetch('/api/me');
+        const data = await res.json();
+        authenticated = !!data.authenticated;
+        username = data.username;
+    } catch (err) {
+        console.error('Could not load account:', err);
+    }
+
+    updateAccountUI(authenticated, username);
+
+    if (authenticated || localStorage.getItem(GUEST_KEY) === '1') {
+        hideGate();
+        // Only load history when user is authenticated or is a guest
+        await loadHistory();
+    } else {
+        showGate('login');
+        renderHistoryLoginPrompt();
+    }
+})();

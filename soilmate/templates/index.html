@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoilMate - AI Soil & Planting Assistant</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23047857'/%3E%3Cpath d='M32 46V25M32 31c-7-1-11-5-12-12 7 0 12 4 12 12Zm0 6c7-1 11-5 12-12-7 0-12 4-12 12Z' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Manrope', 'system-ui', 'sans-serif'] },
+                    boxShadow: {
+                        soft: '0 12px 35px -14px rgba(6, 78, 59, .22)',
+                        glow: '0 12px 30px -12px rgba(16, 185, 129, .55)'
+                    }
+                }
+            }
+        };
+    </script>
+    <script>
+        // Apply the saved theme before the page paints to avoid a flash.
+        (function () {
+            try {
+                var saved = localStorage.getItem('soilmate_theme');
+                var dark = saved
+                    ? saved === 'dark'
+                    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (dark) document.documentElement.classList.add('dark');
+            } catch (error) { /* storage can be unavailable */ }
+        })();
+    </script>
+    <style>
+        :root {
+            --forest: #064e3b;
+            --leaf: #059669;
+            --mint: #34d399;
+            --lime: #a3e635;
+            --ink: #17231f;
+            --mist: #f4fbf7;
+        }
+
+        * { scrollbar-width: thin; scrollbar-color: #a7d9c5 transparent; }
+        *::-webkit-scrollbar { width: 7px; height: 7px; }
+        *::-webkit-scrollbar-thumb { background: #a7d9c5; border-radius: 999px; }
+        *::-webkit-scrollbar-track { background: transparent; }
+
+        html, body { height: 100%; }
+        body {
+            font-family: 'Manrope', system-ui, sans-serif;
+            background: #edf8f2;
+            color: var(--ink);
+        }
+
+        .app-shell {
+            background:
+                radial-gradient(circle at 15% 15%, rgba(163, 230, 53, .12), transparent 31%),
+                radial-gradient(circle at 88% 8%, rgba(52, 211, 153, .19), transparent 28%),
+                linear-gradient(145deg, #f8fdf9 0%, #edf8f3 52%, #f4faf7 100%);
+        }
+
+        .sidebar-gradient {
+            background:
+                radial-gradient(circle at 20% 0%, rgba(163, 230, 53, .18), transparent 28%),
+                radial-gradient(circle at 100% 48%, rgba(52, 211, 153, .12), transparent 32%),
+                linear-gradient(165deg, #063f32 0%, #075e49 56%, #064638 100%);
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, .72);
+            border: 1px solid rgba(255, 255, 255, .78);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .chat-pattern {
+            background-image:
+                linear-gradient(rgba(5, 150, 105, .035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(5, 150, 105, .035) 1px, transparent 1px);
+            background-size: 34px 34px;
+        }
+
+        /* ---------- dark theme ---------- */
+        .dark { --ink: #e4f1ea; }
+
+        .dark body { background: #08110e; }
+
+        .dark .app-shell {
+            background:
+                radial-gradient(circle at 15% 15%, rgba(163, 230, 53, .07), transparent 32%),
+                radial-gradient(circle at 88% 8%, rgba(52, 211, 153, .12), transparent 30%),
+                linear-gradient(145deg, #0a1512 0%, #0b1915 52%, #0d1b16 100%);
+        }
+
+        .dark .glass-panel {
+            background: rgba(11, 24, 20, .82);
+            border-color: rgba(255, 255, 255, .07);
+        }
+
+        .dark .chat-pattern {
+            background-image:
+                linear-gradient(rgba(52, 211, 153, .05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(52, 211, 153, .05) 1px, transparent 1px);
+        }
+
+        .dark * { scrollbar-color: #25614d transparent; }
+        .dark *::-webkit-scrollbar-thumb { background: #25614d; }
+
+        .brand-mark {
+            position: relative;
+            isolation: isolate;
+            overflow: hidden;
+        }
+        .brand-mark::after {
+            content: '';
+            position: absolute;
+            inset: -55% 36% 30% -50%;
+            z-index: -1;
+            transform: rotate(24deg);
+            background: rgba(255,255,255,.22);
+        }
+
+        .sidebar-card {
+            background: rgba(255,255,255,.09);
+            border: 1px solid rgba(255,255,255,.12);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+        }
+
+        .gradient-button {
+            background: linear-gradient(135deg, #059669 0%, #047857 65%, #0f766e 100%);
+            box-shadow: 0 9px 23px -10px rgba(5, 150, 105, .8);
+        }
+        .gradient-button:hover {
+            box-shadow: 0 12px 26px -9px rgba(5, 150, 105, .9);
+            transform: translateY(-1px);
+        }
+        .gradient-button:active { transform: translateY(0) scale(.98); }
+
+        .input-glow:focus {
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, .12), 0 10px 30px -18px rgba(5, 150, 105, .5);
+        }
+
+        .message-enter { animation: messageIn .28s ease-out both; }
+        @keyframes messageIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+        }
+    </style>
+</head>
+<body class="h-screen h-dvh overflow-hidden app-shell flex antialiased">
+
+    <div id="sidebarBackdrop" class="hidden md:hidden fixed inset-0 z-30 bg-emerald-950/55 backdrop-blur-sm"></div>
+
+    <aside id="sidebar"
+           class="sidebar-gradient fixed inset-y-0 left-0 z-40 w-[19rem] max-w-[88vw] text-white p-4 flex flex-col shadow-2xl overflow-y-auto -translate-x-full md:translate-x-0 md:static md:z-auto md:max-w-none md:flex-shrink-0 transition-transform duration-300 ease-out">
+        <div>
+            <div class="flex items-center gap-3 px-2 pt-1">
+                <span class="brand-mark w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-300 to-lime-300 text-emerald-950 flex items-center justify-center flex-shrink-0 shadow-lg shadow-emerald-950/25">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21V9m0 5c-4.6-.6-7-3-7-7 4 0 6.5 2.4 7 7Zm0 3c4.6-.6 7-3 7-7-4 0-6.5 2.4-7 7Z"/>
+                    </svg>
+                </span>
+                <div class="min-w-0 flex-1">
+                    <h1 class="text-xl font-extrabold tracking-tight truncate">SoilMate</h1>
+                    <p class="text-[11px] text-emerald-100/70 truncate tracking-wide">Grow smarter, from the ground up</p>
+                </div>
+                <button id="sidebarCloseBtn" type="button" aria-label="Close menu"
+                        class="md:hidden p-2 rounded-xl text-emerald-100 hover:text-white hover:bg-white/10 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="my-5 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+
+            <div class="sidebar-card rounded-2xl p-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-emerald-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10.5M3 16.5l4.5-4.5a2 2 0 0 1 2.8 0l1.2 1.2 2.7-2.7a2 2 0 0 1 2.8 0l4 4M3 16.5V18a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1.5"/></svg>
+                    </span>
+                    <div>
+                        <h2 class="text-sm font-bold">Soil photo analysis</h2>
+                        <p class="text-[11px] text-emerald-100/60">Identify your soil in seconds</p>
+                    </div>
+                </div>
+                <input type="file" id="soilImageInput" accept="image/*" class="hidden">
+                <button onclick="document.getElementById('soilImageInput').click()"
+                        class="w-full bg-white/12 hover:bg-white/20 border border-white/15 text-white font-semibold text-sm py-2.5 px-4 rounded-xl transition flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L7 9m5-5 5 5M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>
+                    Choose an image
+                </button>
+
+                <div id="imagePreviewContainer" class="mt-3 hidden space-y-3">
+                    <div class="relative overflow-hidden rounded-xl border border-white/20">
+                        <img id="imagePreview" src="" alt="Selected soil sample" class="w-full h-36 object-cover">
+                        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-emerald-950/70 to-transparent h-14"></div>
+                    </div>
+                    <button id="analyzeBtn" class="w-full bg-gradient-to-r from-amber-300 to-lime-300 hover:from-amber-200 hover:to-lime-200 text-emerald-950 font-extrabold text-sm py-2.5 px-4 rounded-xl transition shadow-lg shadow-black/10">
+                        Analyze soil
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-3 sidebar-card rounded-2xl p-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-lime-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 2v3m8-3v3M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z"/></svg>
+                    </span>
+                    <div>
+                        <h2 class="text-sm font-bold">Planting calendar</h2>
+                        <p class="text-[11px] text-emerald-100/60">Seasonal picks for the Philippines</p>
+                    </div>
+                </div>
+                <button id="plantNowBtn"
+                        class="w-full bg-white/12 hover:bg-white/20 border border-white/15 text-white font-semibold text-sm py-2.5 px-4 rounded-xl transition">
+                    What can I plant now?
+                </button>
+            </div>
+
+            <div class="mt-5 px-1">
+                <div class="flex items-center justify-between mb-2.5">
+                    <h2 class="text-[11px] uppercase tracking-[.16em] font-bold text-emerald-100/65">Recent scans</h2>
+                    <div class="flex items-center gap-1.5">
+                        <button id="clearHistoryBtn" type="button" title="Delete all saved scans and chats"
+                                class="hidden items-center gap-1 text-[11px] font-semibold text-emerald-100/70 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10 transition">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V4.5h6V7m-8 0 1 13h8l1-13M10 11v5m4-5v5"/>
+                            </svg>
+                            Clear
+                        </button>
+                        <span class="w-1.5 h-1.5 rounded-full bg-lime-300 shadow-[0_0_8px_rgba(190,242,100,.8)]"></span>
+                    </div>
+                </div>
+                <div id="scanHistory" class="space-y-2">
+                    <div class="rounded-xl border border-dashed border-white/15 py-4 px-3 text-center">
+                        <p class="text-xs text-emerald-100/50">Log in to save your scan history.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 p-3 rounded-xl bg-black/10 border border-white/[.07] flex items-center gap-2.5">
+            <span class="w-8 h-8 rounded-lg bg-emerald-400/15 text-emerald-200 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m9-9H3"/></svg>
+            </span>
+            <div class="min-w-0">
+                <p class="text-xs font-semibold">Built for Filipino growers</p>
+                <p class="text-[10px] text-emerald-100/50 truncate">Local crops · Local seasons</p>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-screen h-dvh overflow-hidden relative">
+        <div class="pointer-events-none absolute -top-28 right-[-6rem] w-80 h-80 bg-emerald-300/25 rounded-full blur-3xl"></div>
+        <div class="pointer-events-none absolute bottom-[-8rem] left-[10%] w-72 h-72 bg-lime-200/20 rounded-full blur-3xl"></div>
+
+        <header class="glass-panel relative z-10 px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 flex-shrink-0 border-x-0 border-t-0">
+            <div class="flex items-center gap-3 min-w-0">
+                <button id="sidebarOpenBtn" type="button" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"
+                        class="md:hidden -ml-1 p-2.5 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition flex-shrink-0 dark:text-slate-300 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/40">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <div class="hidden sm:flex w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-100 to-lime-100 text-emerald-700 items-center justify-center border border-emerald-200/60 shadow-sm dark:from-emerald-900 dark:to-teal-900 dark:text-emerald-300 dark:border-emerald-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m7-2a8 8 0 1 1-3.4-6.54L20 4v8Z"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h2 class="font-extrabold text-slate-800 text-sm sm:text-base truncate tracking-tight dark:text-slate-100">Virtual Agronomist</h2>
+                        <span class="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-wider dark:text-emerald-300 dark:bg-emerald-900/40 dark:border-emerald-800">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online
+                        </span>
+                    </div>
+                    <p class="text-[11px] sm:text-xs text-slate-500 truncate dark:text-slate-400">Practical soil and crop guidance, whenever you need it</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                <button type="button" data-theme-toggle aria-label="Switch to dark mode" title="Switch to dark mode" aria-pressed="false"
+                        class="h-9 w-9 sm:h-10 sm:w-10 rounded-xl border border-emerald-100/80 bg-white/80 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition flex items-center justify-center flex-shrink-0 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300 dark:hover:text-emerald-300 dark:hover:bg-slate-700 dark:hover:border-slate-600">
+                    <svg class="w-4 h-4 dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.5 6.5 0 0 0 9.8 9.8Z"/>
+                    </svg>
+                    <svg class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="4"/>
+                        <path stroke-linecap="round" d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+                    </svg>
+                </button>
+                <div class="hidden sm:flex items-center gap-2.5 pr-1">
+                    <div id="accountAvatar" class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-100 to-lime-100 text-emerald-800 border border-emerald-200/70 flex items-center justify-center font-bold text-sm dark:from-emerald-900 dark:to-teal-900 dark:text-emerald-200 dark:border-emerald-800">G</div>
+                    <div class="hidden lg:block leading-tight">
+                        <p id="accountName" class="text-xs font-bold text-slate-800 max-w-[9rem] truncate dark:text-slate-100">Guest</p>
+                        <p id="accountState" class="text-[10px] text-slate-500 mt-0.5 dark:text-slate-400">Not signed in</p>
+                    </div>
+                </div>
+                <button id="headerLoginBtn" type="button"
+                        class="gradient-button text-white text-xs font-bold px-4 py-2.5 rounded-xl transition">
+                    Log in
+                </button>
+                <button id="headerLogoutBtn" type="button"
+                        class="hidden border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-600 hover:text-emerald-800 text-xs font-bold px-4 py-2.5 rounded-xl transition dark:border-slate-700 dark:text-slate-300 dark:hover:bg-emerald-900/40 dark:hover:border-emerald-700 dark:hover:text-emerald-200">
+                    Log out
+                </button>
+            </div>
+        </header>
+
+        <div id="chatFeed" class="chat-pattern relative z-0 flex-1 min-h-0 overflow-y-auto px-4 py-5 sm:px-7 sm:py-7 space-y-5">
+            <div class="message-enter flex gap-3 max-w-2xl">
+                <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-700/20">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21V9m0 5c-4.6-.6-7-3-7-7 4 0 6.5 2.4 7 7Zm0 3c4.6-.6 7-3 7-7-4 0-6.5 2.4-7 7Z"/></svg>
+                </div>
+                <div class="bg-white/90 backdrop-blur-sm text-slate-700 p-4 sm:p-5 rounded-2xl rounded-tl-md border border-white shadow-soft text-sm leading-7 dark:bg-slate-900/85 dark:text-slate-200 dark:border-slate-800">
+                    <p class="font-extrabold text-slate-900 mb-1 dark:text-white">Mabuhay! I'm SoilMate.</p>
+                    <p>Your AI agriculture assistant for Philippine soil and crops. Ask me a question, explore this month's planting guide, or upload a soil photo for analysis.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="glass-panel relative z-10 px-3 sm:px-6 pt-3 pb-3 sm:pb-4 flex-shrink-0 border-x-0 border-b-0">
+            <div id="suggestionChips" class="flex gap-2 mb-2.5 overflow-x-auto flex-nowrap sm:flex-wrap sm:overflow-visible pb-1"></div>
+
+            <form id="chatForm" class="flex items-center gap-2 sm:gap-3 max-w-5xl mx-auto">
+                <input type="file" id="chatImageInput" accept="image/*" capture="environment" class="hidden">
+                <button type="button" id="chatCameraBtn" aria-label="Take or upload a soil photo"
+                        title="Take or upload a soil photo"
+                        class="h-12 sm:h-[3.25rem] px-3 sm:px-4 rounded-2xl border border-emerald-100/80 bg-white/90 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 transition flex items-center justify-center gap-2 flex-shrink-0 shadow-sm dark:border-emerald-900 dark:bg-slate-900/80 dark:text-emerald-300 dark:hover:bg-emerald-900/40 dark:hover:border-emerald-700">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.2a1.5 1.5 0 0 0 1.2-.6l.9-1.2A1.5 1.5 0 0 1 10 3.6h4a1.5 1.5 0 0 1 1.2.6l.9 1.2a1.5 1.5 0 0 0 1.2.6h1.2A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-8Z"/>
+                        <circle cx="12" cy="12.5" r="3.25"/>
+                    </svg>
+                    <span class="hidden sm:inline text-xs font-bold">Photo</span>
+                </button>
+                <div class="relative flex-1 min-w-0">
+                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600/70 pointer-events-none dark:text-emerald-400/80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m7-2a8 8 0 1 1-3.4-6.54L20 4v8Z"/></svg>
+                    <input type="text" id="userInput" placeholder="Ask anything about soil or crops..." autocomplete="off"
+                           class="input-glow w-full border border-emerald-100/80 rounded-2xl pl-11 pr-4 py-3.5 text-base sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-400 bg-white/90 transition shadow-sm dark:border-emerald-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:bg-slate-900/80 dark:focus:border-emerald-600">
+                </div>
+                <button type="submit" aria-label="Send message" class="gradient-button h-12 sm:h-[3.25rem] px-4 sm:px-6 text-white rounded-2xl font-bold text-sm transition flex items-center justify-center gap-2 flex-shrink-0">
+                    <span class="hidden sm:inline">Send</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4 4 16 8-16 8 3-8-3-8Zm3 8h13"/></svg>
+                </button>
+            </form>
+            <p class="hidden sm:block text-center text-[10px] text-slate-400 mt-2 dark:text-slate-500">SoilMate may make mistakes. Confirm important agricultural decisions with a local expert.</p>
+        </footer>
+    </main>
+
+    <div id="authGate" class="hidden fixed inset-0 z-50 bg-emerald-950/70 backdrop-blur-md overflow-y-auto">
+        <div class="min-h-full flex items-center justify-center p-4 sm:p-6">
+            <div class="w-full max-w-[27rem] bg-white/95 backdrop-blur-xl rounded-[1.75rem] shadow-2xl shadow-emerald-950/30 overflow-hidden border border-white/70 dark:bg-slate-900/95 dark:border-slate-800 dark:shadow-black/50">
+                <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-800 to-teal-900 px-6 pt-8 pb-7 text-center text-white">
+                    <div class="absolute -top-16 -right-14 w-44 h-44 rounded-full bg-lime-300/20 blur-2xl"></div>
+                    <div class="absolute -bottom-20 -left-10 w-48 h-48 rounded-full bg-emerald-300/20 blur-2xl"></div>
+                    <button type="button" data-theme-toggle aria-label="Switch to dark mode" title="Switch to dark mode" aria-pressed="false"
+                            class="absolute top-3 right-3 z-10 h-9 w-9 rounded-xl border border-white/20 bg-white/10 text-emerald-100 hover:bg-white/20 hover:text-white transition flex items-center justify-center">
+                        <svg class="w-4 h-4 dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.5 6.5 0 0 0 9.8 9.8Z"/>
+                        </svg>
+                        <svg class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="4"/>
+                            <path stroke-linecap="round" d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+                        </svg>
+                    </button>
+                    <div class="relative mx-auto w-14 h-14 brand-mark rounded-2xl bg-gradient-to-br from-emerald-200 to-lime-300 text-emerald-950 flex items-center justify-center shadow-lg shadow-black/15">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21V9m0 5c-4.6-.6-7-3-7-7 4 0 6.5 2.4 7 7Zm0 3c4.6-.6 7-3 7-7-4 0-6.5 2.4-7 7Z"/></svg>
+                    </div>
+                    <h2 class="relative mt-3 text-2xl font-extrabold tracking-tight">Welcome to SoilMate</h2>
+                    <p class="relative mt-1 text-xs text-emerald-100/75">Your digital partner for healthier soil and better harvests</p>
+                </div>
+
+                <div class="p-5 sm:p-6">
+                    <div class="flex bg-slate-100 rounded-xl p-1 mb-5 dark:bg-slate-800">
+                        <button id="tabLogin" type="button" class="flex-1 text-sm font-semibold py-2 rounded-lg transition">Log in</button>
+                        <button id="tabRegister" type="button" class="flex-1 text-sm font-semibold py-2 rounded-lg transition">Create account</button>
+                    </div>
+
+                    <form id="authForm" class="space-y-4" novalidate>
+                        <div id="gateLoginFields">
+                            <label for="gateIdentifier" class="block text-xs font-bold text-slate-600 mb-1.5 dark:text-slate-300">Username or email</label>
+                            <input id="gateIdentifier" type="text" autocomplete="username" placeholder="Enter your username or email"
+                                   class="input-glow w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-base sm:text-sm focus:outline-none focus:border-emerald-400 focus:bg-white transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-emerald-500 dark:focus:bg-slate-800">
+                        </div>
+
+                        <div id="gateRegisterFields" class="hidden space-y-4">
+                            <div>
+                                <label for="gateUsername" class="block text-xs font-bold text-slate-600 mb-1.5 dark:text-slate-300">Username</label>
+                                <input id="gateUsername" type="text" autocomplete="username" placeholder="Choose a username"
+                                       class="input-glow w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-base sm:text-sm focus:outline-none focus:border-emerald-400 focus:bg-white transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-emerald-500 dark:focus:bg-slate-800">
+                            </div>
+                            <div>
+                                <label for="gateEmail" class="block text-xs font-bold text-slate-600 mb-1.5 dark:text-slate-300">Email address</label>
+                                <input id="gateEmail" type="email" autocomplete="email" placeholder="you@example.com"
+                                       class="input-glow w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-base sm:text-sm focus:outline-none focus:border-emerald-400 focus:bg-white transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-emerald-500 dark:focus:bg-slate-800">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="gatePassword" class="block text-xs font-bold text-slate-600 mb-1.5 dark:text-slate-300">Password</label>
+                            <input id="gatePassword" type="password" autocomplete="current-password" placeholder="At least 8 characters"
+                                   class="input-glow w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-base sm:text-sm focus:outline-none focus:border-emerald-400 focus:bg-white transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-emerald-500 dark:focus:bg-slate-800">
+                        </div>
+
+                        <p id="gateMessage" class="text-xs text-rose-600 min-h-[1rem] dark:text-rose-400"></p>
+
+                        <button id="gateSubmit" type="submit"
+                                class="gradient-button w-full disabled:opacity-60 text-white font-bold py-3 rounded-xl text-sm transition">
+                            Log in
+                        </button>
+                    </form>
+
+                    <div class="mt-5 pt-4 border-t border-slate-100 text-center dark:border-slate-800">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Want to look around first?</p>
+                        <button id="guestBtn" type="button"
+                                class="mt-1.5 text-sm font-bold text-emerald-700 hover:text-emerald-900 transition dark:text-emerald-400 dark:hover:text-emerald-300">
+                            Continue as guest <span aria-hidden="true">→</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
