@@ -11,8 +11,7 @@ venv/
 static/uploads/*
 !static/uploads/.gitkeep
 
-# Model weights & large datasets
-*.pth
+# Model weights & large datasets(Get-Item soil_model.pth).Length / 1MB
 *.zip
 data/
 soilmate/data/
