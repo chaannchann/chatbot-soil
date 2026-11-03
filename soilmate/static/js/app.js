@@ -13,6 +13,7 @@ const welcomeTitle = document.getElementById('welcomeTitle');
 const welcomeText = document.getElementById('welcomeText');
 const photoBtnLabel = document.getElementById('photoBtnLabel');
 const sendBtnLabel = document.getElementById('sendBtnLabel');
+const newChatBtn = document.getElementById('newChatBtn');
 
 let selectedFile = null;
 let lastSoilType = null;
@@ -23,17 +24,19 @@ const LANG_KEY = 'soilmate_lang';
 let chatLanguage = localStorage.getItem(LANG_KEY) === 'tl' ? 'tl' : 'en';
 
 // Stable per-browser id so the chatbot can remember context between turns
-// (e.g. "how much compost for THIS soil?").
-const SESSION_ID = (() => {
-    let id = localStorage.getItem('soilmate_session');
-    if (!id) {
-        id = (window.crypto && crypto.randomUUID)
-            ? crypto.randomUUID()
-            : 's-' + Date.now() + '-' + Math.random().toString(16).slice(2);
-        localStorage.setItem('soilmate_session', id);
-    }
-    return id;
-})();
+// (e.g. "how much compost for THIS soil?"). "New chat" rotates it so the
+// conversation starts with clean context.
+function createSessionId() {
+    return (window.crypto && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : 's-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+}
+
+let SESSION_ID = localStorage.getItem('soilmate_session');
+if (!SESSION_ID) {
+    SESSION_ID = createSessionId();
+    localStorage.setItem('soilmate_session', SESSION_ID);
+}
 
 // ------------------------- THEME -------------------------
 const THEME_KEY = 'soilmate_theme';
@@ -635,6 +638,22 @@ function closeSidebar() {
 sidebarOpenBtn.addEventListener('click', openSidebar);
 sidebarCloseBtn.addEventListener('click', closeSidebar);
 sidebarBackdrop.addEventListener('click', closeSidebar);
+
+// Start a fresh conversation: clear the feed back to the welcome bubble and
+// rotate the session id so earlier soil/context does not carry over.
+function startNewChat() {
+    SESSION_ID = createSessionId();
+    localStorage.setItem('soilmate_session', SESSION_ID);
+    lastSoilType = null;
+    resetFeed();
+    userInput.value = '';
+    closeSidebar();
+    userInput.focus();
+}
+
+if (newChatBtn) {
+    newChatBtn.addEventListener('click', startNewChat);
+}
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeSidebar();
