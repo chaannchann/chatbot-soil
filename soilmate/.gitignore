@@ -13,8 +13,7 @@ static/uploads/*
 
 # Model weights & large datasets(Get-Item soil_model.pth).Length / 1MB
 *.zip
-data/
-soilmate/data/
+data/balanced_dataset/
 
 # Cache & tests
 .pytest_cache/

@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "note": "Canonical soil/surface catalog. class_key must match an entry in classes.json; name is the value stored in soil_types.name and used by crop_soil_compatibility. crops lists extra compatible crops for seed.py (the original crop-side mappings stay in data/crops.json).",
+  "soils": [
+    {
+      "class_key": "Alluvial_soil",
+      "name": "Alluvial Soil",
+      "display_name": "Alluvial Soil",
+      "aliases": ["alluvial", "river silt", "floodplain soil", "silt soil"],
+      "description": "Fertile, silt-rich soil deposited by rivers and floods. Usually deep, moisture-retentive, and nutrient-rich, making it one of the best soils for Philippine lowland farming.",
+      "drainage": "Moderate / Good",
+      "water_retention": "High",
+      "common_ph_range": "5.5 - 7.0",
+      "improvement_tips": "Protect riverbank plots from erosion with cover crops or riprap. Open drainage channels during heavy rain, then side-dress with compost after floods leach nutrients. Avoid burning crop residue; incorporate it instead to keep organic matter high.",
+      "crops": ["Rice", "Corn", "Kangkong", "Taro", "Bok Choy / Pechay", "Mustard Greens", "Lettuce", "Cabbage", "Tomato", "Eggplant", "Okra", "String Beans", "Mung Bean", "Cucumber", "Squash", "Bitter Gourd", "Bottle Gourd", "Malunggay", "Radish", "Onion"]
+    },
+    {
+      "class_key": "Black_Soil",
+      "name": "Black Soil",
+      "display_name": "Black Soil",
+      "aliases": ["black", "dark soil", "loam", "loamy soil", "humus soil"],
+      "description": "Rich in organic matter and humus. Highly fertile, holds moisture well, and supports intense microbial activity.",
+      "drainage": "Moderate / Good",
+      "water_retention": "High",
+      "common_ph_range": "6.0 - 7.5",
+      "improvement_tips": "Maintain organic mulch annually. Minimal amendment needed; great for leafy greens."
+    },
+    {
+      "class_key": "Cinder_Soil",
+      "name": "Cinder Soil",
+      "display_name": "Cinder Soil",
+      "aliases": ["cinder", "volcanic cinder", "scoria", "volcanic soil", "lava soil"],
+      "description": "Volcanic cinder or scoria soil. Coarse, highly porous, and fast-draining, with good mineral content but limited water and nutrient holding capacity.",
+      "drainage": "Very Rapid / Excessive",
+      "water_retention": "Low",
+      "common_ph_range": "5.5 - 7.0",
+      "improvement_tips": "Add compost, vermicast, and coconut coir to slow drainage and hold nutrients. Mulch heavily and water more often in small amounts. Cinder is excellent for raised beds and drought-tolerant crops; apply lime if the soil is strongly acidic.",
+      "crops": ["Tomato", "Eggplant", "Okra", "Chili Pepper", "Bell Pepper", "Cucumber", "Squash", "Watermelon", "Bitter Gourd", "Bottle Gourd", "Sponge Gourd", "String Beans", "Peanut", "Carrot", "Radish", "Onion", "Garlic", "Basil", "Lemongrass", "Corn"]
+    },
+    {
+      "class_key": "Clay_soil",
+      "name": "Clay Soil",
+      "display_name": "Clay Soil",
+      "aliases": ["clay", "clayey", "clayey soil", "heavy clay", "heavy soil"],
+      "description": "Heavy, fine-textured soil made of very small particles. Sticky when wet and hard or cracked when dry; drains slowly but holds water and nutrients well.",
+      "drainage": "Slow / Poor",
+      "water_retention": "Very High",
+      "common_ph_range": "5.5 - 7.0",
+      "improvement_tips": "Avoid tilling when wet to prevent compaction. Add coarse sand, rice hull, compost, and aged manure to improve structure. Plant on raised beds, keep drainage channels clear, and choose water-tolerant crops such as rice, taro, and kangkong during the wet season.",
+      "crops": ["Rice", "Taro", "Kangkong", "Alugbati", "Malunggay", "Lemongrass"]
+    },
+    {
+      "class_key": "Laterite_Soil",
+      "name": "Laterite Soil",
+      "display_name": "Laterite Soil",
+      "aliases": ["laterite", "lateritic", "lateritic soil", "red laterite"],
+      "description": "Iron- and aluminium-rich tropical soil, often reddish and gravelly. Acidic, low in nutrients, and prone to hardening when exposed, but suitable for hardy upland crops.",
+      "drainage": "Rapid / Good",
+      "water_retention": "Low to Moderate",
+      "common_ph_range": "4.5 - 6.0",
+      "improvement_tips": "Apply agricultural lime to raise pH and add generous compost or manure. Keep the soil covered with mulch or cover crops to stop laterite from baking hard. Grow acid-tolerant crops such as cassava, sweet potato, peanut, ginger, and ube.",
+      "crops": ["Cassava", "Sweet Potato", "Peanut", "Ginger", "Ube", "Lemongrass", "Mung Bean", "Corn"]
+    },
+    {
+      "class_key": "Peat_Soil",
+      "name": "Peat Soil",
+      "display_name": "Peat Soil",
+      "aliases": ["peat", "peaty soil", "muck soil", "organic muck"],
+      "description": "Dark, spongy soil formed from partly decomposed plant material. Very high in organic matter but acidic, waterlogged, and low in available nutrients.",
+      "drainage": "Very Poor / Waterlogged",
+      "water_retention": "Excessive",
+      "common_ph_range": "4.0 - 5.5",
+      "improvement_tips": "Open shallow drainage ditches, but never drain peat completely - dry peat burns easily and subsides. Apply lime to reduce acidity, then add compost and rock phosphate. Grow acid-tolerant, water-loving crops such as rice, taro, kangkong, and alugbati.",
+      "crops": ["Rice", "Taro", "Kangkong", "Alugbati"]
+    },
+    {
+      "class_key": "Red_soil",
+      "name": "Red Soil",
+      "display_name": "Red Soil",
+      "aliases": ["red", "red clay", "red earth", "reddish soil"],
+      "description": "Iron-rich tropical soil, typically acidic and well-draining, but can pack down hard if dry.",
+      "drainage": "Rapid / Good",
+      "water_retention": "Low to Moderate",
+      "common_ph_range": "5.0 - 6.0",
+      "improvement_tips": "Incorporate agricultural lime to balance pH and mix in vermicast or compost to boost nutrient retention."
+    },
+    {
+      "class_key": "Yellow_Soil",
+      "name": "Yellow Soil",
+      "display_name": "Yellow / Sandy Soil",
+      "aliases": ["yellow", "sandy", "sandy soil", "sandy loam", "yellow sandy soil"],
+      "description": "Coarse-textured sandy/loamy soil. Highly porous, drains water very quickly, and leaches nutrients fast.",
+      "drainage": "Rapid / High",
+      "water_retention": "Low",
+      "common_ph_range": "5.5 - 7.0",
+      "improvement_tips": "Heavy addition of organic compost and manure is essential to prevent water and nutrient loss."
+    },
+    {
+      "class_key": "concrete_surface",
+      "name": "Concrete Surface",
+      "display_name": "Concrete Surface (Non-Soil)",
+      "aliases": ["concrete", "concrete surface", "cement", "pavement", "non soil", "non-soil"],
+      "description": "Impervious, non-porous man-made urban surface. Natural in-ground root penetration is impossible.",
+      "drainage": "None (Runoff)",
+      "water_retention": "None",
+      "common_ph_range": "N/A",
+      "improvement_tips": "Direct planting in the ground is not possible. Opt for container gardening, raised garden beds, hanging planters, or vertical wall gardens. For cracks or paver gaps, consider creeping groundcovers like Bermuda grass or dwarf carpet grass.",
+      "crops": []
+    },
+    {
+      "class_key": "soil_with_algae",
+      "name": "Soil with Algae",
+      "display_name": "Soil with Algae / Biocrust",
+      "aliases": ["algae", "algal soil", "biocrust", "soil with algae", "green slime", "moss soil"],
+      "description": "Surface biocrust or green algal slime. Indicates severe waterlogging, high compaction, poor drainage, and heavy shade or high moisture saturation.",
+      "drainage": "Very Poor / Waterlogged",
+      "water_retention": "Excessive",
+      "common_ph_range": "5.0 - 6.5",
+      "improvement_tips": "Immediately reduce watering and aerate the topsoil by gentle tilling. Incorporate coarse sand, perlite, or organic compost to restore oxygen flow. Apply agricultural lime if moss or algae is driven by acidic damp conditions.",
+      "crops": ["Rice", "Taro", "Kangkong", "Alugbati"]
+    }
+  ]
+}

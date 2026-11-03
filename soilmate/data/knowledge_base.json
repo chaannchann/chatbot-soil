@@ -1,0 +1,394 @@
+{
+  "version": 1,
+  "name": "SoilMate Philippine Agriculture Knowledge Base",
+  "fallback": "I'm not sure I understood that one yet. I'm strongest on **soil health, composting, fertilizers, watering, pests, and Philippine crop timing**.\n\nCould you rephrase it, or try one of these:\n- *What is the right soil pH for vegetables?*\n- *How do I make compost?*\n- *Why are my ampalaya leaves turning yellow?*\n\nYou can also upload a photo of your soil from the sidebar menu and I'll analyze it.",
+  "soil_aliases": {
+    "Black Soil": ["black soil", "black", "dark soil", "dark", "loam", "loamy", "humus", "mabuhanging lupa"],
+    "Red Soil": ["red soil", "red", "laterite", "lateritic", "clay", "clayey", "puting lupa na pula"],
+    "Yellow Soil": ["yellow soil", "yellow", "sandy", "sand", "sandy loam", "malabuhanging lupa"]
+  },
+  "soil_to_intent": {
+    "Black Soil": "soil_black",
+    "Red Soil": "soil_red",
+    "Yellow Soil": "soil_yellow"
+  },
+  "intents": [
+    {
+      "id": "greeting",
+      "title": "Greeting",
+      "patterns": [
+        "hello", "hi", "hey", "good morning", "good afternoon", "good evening",
+        "mabuhay", "kamusta", "kumusta", "hello there", "hi soilmate", "musta"
+      ],
+      "keywords": ["hello", "hi", "mabuhay", "kamusta"],
+      "answer": "Mabuhay! I'm **SoilMate**, your Philippine soil and crop assistant.\n\nAsk me about soil pH, composting, organic fertilizer, watering, pests, or what to plant this month. You can also upload a photo of your soil from the sidebar menu and I'll identify its type and recommend crops.",
+      "follow_ups": ["What can I plant this month?", "How do I test soil pH?", "How do I make compost?"]
+    },
+    {
+      "id": "help",
+      "title": "Capabilities",
+      "patterns": [
+        "what can you do", "help", "what can i ask", "how do you work",
+        "what do you know", "guide me", "what are your features", "options", "commands"
+      ],
+      "keywords": ["help", "capabilities", "features"],
+      "answer": "Here's what I can help you with:\n\n- **Soil pH** — ideal ranges, how to test, how to correct it\n- **Composting** — how to make it, how much to mix in\n- **Organic fertilizer** — vermicast, chicken manure, carbonized rice hull\n- **Leaf problems** — yellowing, spots, wilting\n- **Watering & drainage** — schedules, waterlogging fixes\n- **Pest control** — organic solutions for common Philippine pests\n- **Planting timing** — wet vs dry season, best months\n- **Soil analysis** — upload a photo from the sidebar menu\n\nIf it's about growing food in the Philippines, just ask.",
+      "follow_ups": ["What can I plant this month?", "How much compost should I mix in?", "How often should I water?"]
+    },
+    {
+      "id": "thanks",
+      "title": "Thanks",
+      "patterns": ["thanks", "thank you", "salamat", "maraming salamat", "ty", "appreciate it", "that helped"],
+      "keywords": ["thanks", "salamat"],
+      "answer": "Walang anuman! Happy to help.\n\nIf you want, upload a photo of your soil and I'll check what crops would suit it best.",
+      "follow_ups": ["What can I plant this month?", "How do I improve my soil?"]
+    },
+    {
+      "id": "soil_ph_basics",
+      "title": "Soil pH basics",
+      "patterns": [
+        "what is soil ph", "what is ph", "ideal soil ph", "right ph for vegetables",
+        "soil ph for vegetables", "ph range for crops", "ph level for plants",
+        "how important is ph", "what does ph mean", "ph meaning soil",
+        "acidic soil", "alkaline soil", "neutral soil", "is my soil acidic"
+      ],
+      "keywords": ["ph", "acidity", "acidic", "alkaline", "neutral"],
+      "answer": "**Soil pH** measures how acidic or alkaline your soil is, on a scale of 0 to 14:\n- **Below 7** = acidic\n- **7** = neutral\n- **Above 7** = alkaline\n\nMost Philippine vegetables grow best at **pH 6.0 to 7.0** (slightly acidic to neutral). At that range, nutrients like nitrogen, phosphorus, and potassium stay *available* to the roots.\n\nIf pH drifts too far, nutrients get locked in the soil even if you fertilize — the plant simply can't absorb them.",
+      "follow_ups": ["How do I test soil pH?", "How do I fix acidic soil?", "What is the pH of red soil?"]
+    },
+    {
+      "id": "soil_ph_testing",
+      "title": "Testing soil pH",
+      "patterns": [
+        "how do i test soil ph", "how to test ph", "testing soil ph", "ph test",
+        "how do i know my soil ph", "measure soil ph", "check ph of soil",
+        "ph meter", "litmus test", "soil testing", "where to test soil",
+        "how to test ph without a kit", "diy ph test"
+      ],
+      "keywords": ["test", "testing", "measure", "meter", "litmus", "kit"],
+      "answer": "You can test pH without spending much:\n\n1. **DIY vinegar & baking soda test** (free, rough)\n- Take 2 spoonfuls of dry soil in a cup.\n- Add **vinegar** — if it fizzles, your soil is **alkaline**.\n- If nothing happens, add **baking soda + water** to a second sample — if it fizzles, your soil is **acidic**.\n- If neither fizzles, you're likely near **neutral**.\n\n2. **Universal pH indicator strips** (cheap, sold in garden supply shops)\n- Mix soil with distilled water 1:1, stir, let it settle, dip the strip in the clear liquid.\n\n3. **Digital pH meter** (₱300–₱1,500)\n- Fastest and most accurate for repeated use. Probe directly into moist soil.\n\nFor serious farming, a **soil lab test** through your local Municipal Agriculture Office (MAO) is usually free or very cheap.",
+      "follow_ups": ["How do I fix acidic soil?", "What is the ideal pH for pechay?", "How do I make compost?"]
+    },
+    {
+      "id": "soil_ph_adjust",
+      "title": "Correcting soil pH",
+      "patterns": [
+        "how do i fix acidic soil", "lower soil ph", "raise soil ph", "increase ph",
+        "decrease ph", "make soil less acidic", "make soil more acidic",
+        "soil too acidic", "soil too alkaline", "sweeten the soil", "add lime",
+        "agricultural lime", "wood ash", "sulfur for soil", "correct soil ph"
+      ],
+      "keywords": ["lime", "sulfur", "correct", "fix", "raise", "lower", "adjust"],
+      "answer": "**To raise pH (make less acidic):**\n- **Agricultural lime (calcium carbonate)** — the standard fix. Roughly **1–2 kg per 10 sq m** for a 1-point increase, worked into the top 15 cm.\n- **Wood ash** — a light sprinkle, but use sparingly, it also raises potassium.\n- **Compost or vermicast** — gently buffers pH toward neutral while adding nutrients.\n- Give it **2–4 weeks** before planting.\n\n**To lower pH (make more acidic):**\n- **Elemental sulfur** — slow but effective, roughly 200 g per 10 sq m.\n- **Pine needles, coffee grounds, or aged manure** — mild and gradual.\n- **Carbonized rice hull (CRH)** — helps over time.\n\nAlways amend **before** planting, and retest after a few weeks. For red laterite soil (often pH 5.0–6.0), lime is your first move.",
+      "follow_ups": ["How do I test soil pH?", "What is the pH of red soil?", "How do I improve red soil?"]
+    },
+    {
+      "id": "compost_making",
+      "title": "Making compost",
+      "patterns": [
+        "how do i make compost", "how to make compost", "compost making", "make compost",
+        "composting at home", "how do i start composting", "compost pile",
+        "compost recipe", "organic compost", "how to compost", "bokashi",
+        "how long does compost take", "compost ingredients"
+      ],
+      "keywords": ["compost", "composting", "pile"],
+      "answer": "Composting is easy once you get the **browns-to-greens ratio** right:\n\n**The mix (roughly 2:1 or 3:1 by volume)**\n- **Browns (carbon):** dried leaves, rice straw, shredded cardboard, sawdust, coconut husk\n- **Greens (nitrogen):** kitchen scraps (no meat/oil), grass clippings, coffee grounds, animal manure\n\n**Steps**\n1. Build a pile or use a bin/drum, at least **1 cubic meter** for heat retention.\n2. Alternate browns and greens in **thin layers**.\n3. Keep it **as damp as a wrung-out sponge** — not soaking wet.\n4. **Turn it every 1–2 weeks** to add oxygen.\n5. Ready in **4–8 weeks** in Philippine heat. It's done when it's dark, crumbly, and smells earthy (not sour).\n\nAvoid meat, oily food, and diseased plants. If it smells bad, you need more browns or more turning.",
+      "follow_ups": ["How much compost should I mix with my soil?", "How do I make organic fertilizer?", "How do I improve yellow soil?"]
+    },
+    {
+      "id": "compost_amount",
+      "title": "How much compost to mix",
+      "patterns": [
+        "how much compost should i mix with my soil", "how much compost", "compost amount",
+        "how much compost do i add", "how much compost per square meter",
+        "compost ratio", "how much compost for my garden", "how much compost to mix in",
+        "how much compost in pots", "compost application rate"
+      ],
+      "keywords": ["how much compost", "compost amount", "ratio", "rate"],
+      "answer_by_soil": {
+        "Black Soil": "Your **black soil** is already rich in organic matter, so you don't need much — a light **top-dress of 1–2 cm** of compost once per season is enough to maintain fertility.\n\nMix it gently into the top **5 cm** only. Over-amending black soil can make it waterlogged and smother root growth.",
+        "Red Soil": "**Red soil** is usually heavy clay and often acidic, so it needs a moderate amendment:\n\n- Mix **3–5 kg of compost per square meter**, worked into the top **15–20 cm**.\n- Add **carbonized rice hull (CRH)** at about 1 part to 3 parts compost — this opens up the clay and improves drainage.\n- Reapply **every planting season**.\n- Since red soil is acidic, pair the compost with a light application of **agricultural lime**.",
+        "Yellow Soil": "**Yellow (sandy) soil** drains extremely fast and leaches nutrients, so it needs the most help:\n\n- Mix **5–8 kg of compost per square meter**, worked deeply into the top **20–30 cm**.\n- Add **vermicast or well-aged chicken manure** at 1–2 kg per sq m for nutrients.\n- Because sandy soil holds little, apply compost **every season** — and mulch heavily to slow water loss.\n- For **potted plants**, use about **1 part compost to 2 parts soil**."
+      },
+      "answer": "As a general rule, mix **3–5 kg of well-decomposed compost per square meter** into the top 15–20 cm of soil.\n\nI can be more exact if you tell me your soil type:\n- **Black soil** → light maintenance only (1–2 cm top-dress)\n- **Red soil** → 3–5 kg per sq m, plus carbonized rice hull\n- **Yellow/sandy soil** → 5–8 kg per sq m, reapplied every season",
+      "follow_ups": ["How do I make compost?", "How do I improve yellow soil?", "What is the pH of my soil?"]
+    },
+    {
+      "id": "fertilizer_organic",
+      "title": "Organic fertilizers",
+      "patterns": [
+        "what organic fertilizer is best", "organic fertilizer for sandy soil",
+        "best organic fertilizer philippines", "organic fertilizer", "natural fertilizer",
+        "what fertilizer should i use", "fertilizer for vegetables", "vermicast",
+        "vermicompost", "chicken manure", "carbonized rice hull", "crh",
+        "manure fertilizer", "compost tea", "liquid fertilizer", "fertilizer recommendation"
+      ],
+      "keywords": ["fertilizer", "organic", "vermicast", "manure", "vermicompost", "crh", "rice hull"],
+      "answer": "For Philippine gardens, these are the strongest **local, organic** options:\n\n- **Vermicast (worm castings)** — the most complete. Gentle, won't burn plants, excellent for seedlings and pots. Mix 1–2 cups per plant.\n- **Well-aged chicken manure** — high in nitrogen, great for leafy greens. Must be **aged 3–6 months**; fresh manure burns roots and carries disease.\n- **Carbonized rice hull (CRH)** — not a fertilizer itself, but it **loosens clay, aerates soil, and holds water and nutrients**. Excellent for red and yellow soil.\n- **Compost** — the foundation. Builds soil structure and microbial life.\n- **Compost tea / fish emulsion** — fast liquid boost for yellowing leaves.\n\n**For sandy/yellow soil specifically:** combine CRH + vermicast + compost, and apply **in small amounts more often**, since sandy soil leaches nutrients quickly.\n\nAvoid fresh manure, and never over-apply nitrogen — it causes leafy growth with no fruit.",
+      "follow_ups": ["How much compost should I mix in?", "How do I improve yellow soil?", "How often should I fertilize?"]
+    },
+    {
+      "id": "fertilizer_application",
+      "title": "Fertilizer application timing",
+      "patterns": [
+        "how often should i fertilize", "when to fertilize", "fertilizer schedule",
+        "how to apply fertilizer", "side dressing", "fertilizing vegetables",
+        "how much fertilizer", "when to apply compost", "fertilizer timing"
+      ],
+      "keywords": ["apply", "schedule", "timing", "when", "often"],
+      "answer": "A simple organic feeding rhythm:\n\n**Before planting (basal)**\n- Work compost + vermicast into the planting hole or bed.\n\n**3–4 weeks after transplanting (side-dress)**\n- Ring a small handful of vermicast or aged chicken manure around each plant, about a palm's width from the stem. Water it in.\n\n**Every 3–4 weeks during growth**\n- Repeat the side-dressing.\n\n**At flowering/fruiting**\n- Shift toward **potassium-rich** inputs — wood ash or banana peel tea — to support fruit development instead of leaf growth.\n\nAlways fertilize **moist soil**, never bone-dry soil, and water afterward. Feeding dry roots causes burn.",
+      "follow_ups": ["What organic fertilizer is best?", "How often should I water?", "Why are my leaves turning yellow?"]
+    },
+    {
+      "id": "yellow_leaves",
+      "title": "Yellowing leaves",
+      "patterns": [
+        "why are my leaves turning yellow", "leaves turning yellow", "yellow leaves",
+        "leaves are yellowing", "plant leaves yellow", "why is my plant yellow",
+        "chlorosis", "pale leaves", "leaves losing color", "old leaves yellow",
+        "new leaves yellow", "plant looks pale"
+      ],
+      "keywords": ["yellow", "yellowing", "pale", "chlorosis"],
+      "answer": "Yellowing leaves usually mean one of four things — check in this order:\n\n1. **Nitrogen deficiency** — *old/lower* leaves yellow first, starting at the tips. Fix: side-dress with vermicast or aged chicken manure.\n2. **Overwatering / poor drainage** — leaves yellow *and* droop, soil stays soggy, roots rot. Fix: stop watering, improve drainage with CRH, check for waterlogged beds. This is very common in Philippine rainy season.\n3. **pH nutrient lockout** — pH outside 6.0–7.0 keeps nutrients unavailable even if you fertilize. Fix: test pH, add lime if acidic.\n4. **Magnesium or iron deficiency** — yellowing *between* the veins on new growth. Fix: a light spray of Epsom salt solution (1 tbsp per 4 L of water).\n\n**Quick test:** if lower leaves go yellow first → nitrogen. If the whole plant looks limp and yellow → overwatering. If yellow sits between green veins → micronutrient.",
+      "follow_ups": ["How often should I water?", "How do I test soil pH?", "What organic fertilizer is best?"]
+    },
+    {
+      "id": "ampalaya_care",
+      "title": "Ampalaya (bitter gourd) care",
+      "patterns": [
+        "why are my ampalaya leaves turning yellow", "ampalaya leaves turning yellow",
+        "ampalaya", "bitter gourd", "bitter melon", "growing ampalaya",
+        "ampalaya care", "how to grow ampalaya", "ampalaya yellowing",
+        "ampalaya not fruiting", "ampalaya trellis"
+      ],
+      "keywords": ["ampalaya", "bitter gourd", "bitter melon"],
+      "answer": "**Ampalaya (bitter gourd)** is a heavy feeder and a vigorous vine. Here's what it needs:\n\n**Site & support**\n- Full sun, at least **6 hours**.\n- Give it a **trellis 2 m tall** — the vine won't fruit well sprawled on the ground.\n\n**Soil**\n- Best at **pH 6.0–6.7**, well-drained. Black or yellow soil works; red clay needs CRH.\n- Rich in organic matter — mix compost + vermicast before planting.\n\n**If the leaves are turning yellow:**\n- Ampalaya is **hungry for nitrogen** — it's the most common cause. Side-dress with vermicast or aged chicken manure.\n- Also check for **waterlogging** — ampalaya hates soggy roots, and Philippine downpours can drown it. Raise beds if needed.\n- Watch for **aphids and fruit fly**, which stress the plant and cause yellowing.\n\n**Timing:** germinates in 5–10 days, harvests in **60–80 days**. Best planted **Oct–Feb**.",
+      "follow_ups": ["What organic fertilizer is best?", "How do I control pests organically?", "What can I plant this month?"]
+    },
+    {
+      "id": "crop_specific_care",
+      "title": "Specific crop care",
+      "patterns": [
+        "how to grow pechay", "pechay", "bok choy", "how to grow eggplant", "talong",
+        "how to grow string beans", "sitaw", "how to grow kamote", "sweet potato",
+        "how to grow cassava", "kamoteng kahoy", "how to grow tomato", "kamatis",
+        "how to grow okra", "how to grow sili", "chili", "how to grow kangkong",
+        "water spinach", "how to grow mung bean", "munggo", "how to grow corn", "mais",
+        "growing vegetables philippines", "vegetable gardening philippines",
+        "how to grow kalabasa", "squash", "how to grow pipino", "cucumber",
+        "how to grow pakwan", "watermelon", "how to grow upo", "bottle gourd",
+        "patola", "how to grow sayote", "chayote", "mustasa", "mustard greens",
+        "lettuce", "litsugas", "repolyo", "cabbage", "carrot", "karot",
+        "labanos", "radish", "sibuyas", "onion", "bawang", "garlic",
+        "luya", "ginger", "gabi", "taro", "ube", "palay", "rice farming",
+        "malunggay", "alugbati", "mani", "peanut", "basil", "balanoy", "tanglad", "lemongrass"
+      ],
+      "keywords": ["pechay", "talong", "eggplant", "sitaw", "string beans", "kamote", "cassava", "tomato", "okra", "kangkong", "munggo", "kalabasa", "squash", "pipino", "cucumber", "pakwan", "watermelon", "upo", "patola", "sayote", "chayote", "mustasa", "lettuce", "repolyo", "cabbage", "carrot", "labanos", "radish", "sibuyas", "onion", "bawang", "garlic", "luya", "ginger", "gabi", "taro", "ube", "corn", "mais", "palay", "rice", "malunggay", "alugbati", "mani", "peanut", "basil", "lemongrass"],
+      "answer": "Here are quick guides for common Philippine crops:\n\n- **Pechay (Bok Choy)** — fastest and easiest. pH 5.5–7.0, harvest **30–45 days**. Loves nitrogen, so compost + vermicast. Plant Nov–Feb for best results, though it grows year-round.\n- **Talong (Eggplant)** — pH 5.5–6.8, germinates 7–14 days, harvest **80–100 days**. Full sun, stake the plants. Watch for fruit fly and aphids.\n- **Sitaw (String Beans)** — a **legume**, so it *fixes its own nitrogen* — go easy on nitrogen fertilizer or you'll get leaves and no pods. pH 5.5–6.5, harvest **50–65 days**.\n- **Kamatis (Tomato)** — pH 6.0–6.8, harvest 60–90 days. Needs staking and steady moisture to avoid blossom-end rot.\n- **Kamote (Sweet Potato)** — pH 5.5–6.5, harvest **90–120 days**. Very forgiving; grows in poor soil. Plant near the end of the rainy season.\n- **Kamoteng Kahoy (Cassava)** — pH 5.0–6.5, harvest **240–300 days**. Extremely drought-tolerant; start at the beginning of the rainy season (May–July).\n- **Kangkong (Water Spinach)** — grows in wet or even waterlogged soil — perfect for problem spots. Harvest in as little as 21–30 days.\n- **Pipino (Cucumber)** — pH 6.0–7.0, harvest 50–65 days. Give it a trellis and steady watering.\n- **Kalabasa (Squash)** — pH 6.0–6.8, harvest 90–120 days. Give the vines plenty of room.\n- **Mais (Corn)** — pH 5.8–7.0, harvest 90–120 days. Plant in blocks, not a single row, for good pollination.\n- **Malunggay (Moringa)** — drought-tolerant; leaves ready in 60–90 days and it keeps producing.\n- **Luya (Ginger)** and **Ube** — long-season root crops, 240–300 days. Plant at the start of the rains (Apr–May).\n- **Sibuyas (Onion)** and **Bawang (Garlic)** — cool dry months only, 90–120 days.\n- **Gabi (Taro)** — loves wet ground, harvest 180–240 days.\n\nI carry **35 Philippine crops** with pH ranges, planting months, and soil compatibility. Ask *\"what can I plant this month?\"* or upload a soil photo and I'll filter the list for your soil.\n\nTell me which crop you're growing and I'll go deeper.",
+      "follow_ups": ["What can I plant this month?", "Why are my leaves turning yellow?", "How often should I water?"]
+    },
+    {
+      "id": "soil_black",
+      "title": "Black soil",
+      "patterns": [
+        "what is black soil good for", "black soil", "is black soil good",
+        "black soil crops", "planting in black soil", "dark soil", "loam soil",
+        "what grows in black soil", "black soil ph", "rich soil"
+      ],
+      "keywords": ["black", "dark", "loam", "humus"],
+      "answer": "**Black soil** is the best of the three — it's rich in organic matter and humus, holds moisture well, and teems with microbial life.\n\n**Profile**\n- Drainage: moderate/good\n- Water retention: high\n- Typical pH: **6.0–7.5** (near ideal)\n\n**What to plant**\n- Almost anything. It's ideal for **leafy greens (pechay)**, eggplant, sitaw, and ampalaya.\n\n**Care**\n- Minimal amendment needed. Just **maintain organic matter** with a light annual compost top-dress and mulch.\n- Don't over-water or over-amend — black soil's high water retention can turn **waterlogged** in the rainy season, which rots roots.\n- Keep it covered with mulch so heavy rain doesn't leach the nutrients.",
+      "follow_ups": ["What can I plant this month?", "How much compost should I mix in?", "How often should I water?"]
+    },
+    {
+      "id": "soil_red",
+      "title": "Red soil",
+      "patterns": [
+        "red soil", "what is red soil good for", "laterite soil", "clay soil",
+        "red clay", "improve red soil", "planting in red soil", "red soil ph",
+        "what grows in red soil", "hard clay soil", "soil packs hard"
+      ],
+      "keywords": ["red", "laterite", "clay", "clayey"],
+      "answer": "**Red soil** (laterite) is iron-rich tropical soil — acidic, well-draining when loose, but it **packs hard when dry**.\n\n**Profile**\n- Drainage: rapid when loose / poor once compacted\n- Water retention: low to moderate\n- Typical pH: **5.0–6.0** (acidic)\n\n**What to plant**\n- Cassava, sweet potato, and root crops do well. Sitaw, talong, and kamote are good choices.\n\n**How to improve it**\n1. **Add agricultural lime** to raise pH toward 6.0–7.0 — roughly 1–2 kg per 10 sq m.\n2. **Work in compost** (3–5 kg per sq m) to break up the clay structure.\n3. **Add carbonized rice hull (CRH)** — the single best fix for heavy clay. It opens the soil and improves drainage.\n4. **Never work it when wet** — it turns into hard clods. Till when slightly moist.\n5. **Mulch heavily** to stop it baking into bricks under the sun.",
+      "follow_ups": ["How do I fix acidic soil?", "How much compost should I mix in?", "What can I plant this month?"]
+    },
+    {
+      "id": "soil_yellow",
+      "title": "Yellow / sandy soil",
+      "patterns": [
+        "yellow soil", "sandy soil", "what is yellow soil good for", "improve yellow soil",
+        "yellow soil ph", "sandy soil philippines", "what grows in sandy soil",
+        "what grows in yellow soil", "soil drains too fast", "water drains quickly",
+        "poor sandy soil", "sandy soil fertilizer", "growing in sandy soil"
+      ],
+      "keywords": ["yellow", "sandy", "sand", "drain", "drains"],
+      "answer": "**Yellow soil** is coarse, sandy/loamy soil — highly porous, drains very fast, and **leaches nutrients quickly**.\n\n**Profile**\n- Drainage: rapid/high\n- Water retention: low\n- Typical pH: **5.5–7.0**\n\n**What to plant**\n- Root crops love it: **kamote (sweet potato)**, **kamoteng kahoy (cassava)**, and sitaw/ampalaya do well.\n- Avoid shallow-rooted, thirsty crops like pechay unless you amend heavily and water often.\n\n**How to improve it**\n1. **Heavy compost addition** is essential — **5–8 kg per sq m**, worked deep (20–30 cm).\n2. **Add vermicast or aged chicken manure** — sandy soil needs nutrients supplied frequently, not once.\n3. **Mulch thickly** (rice straw, dried leaves) to slow evaporation and stop rain from washing nutrients away.\n4. **Water in small amounts, more often** — water runs straight through, so little reaches the roots.\n5. **Add CRH or coconut coir** to improve its ability to hold water and nutrients.\n\nThink of yellow soil as a bucket with holes: you must *keep refilling* it. Little and often beats one big application.",
+      "follow_ups": ["What organic fertilizer is best for sandy soil?", "How much compost should I mix in?", "What can I plant this month?"]
+    },
+    {
+      "id": "drainage",
+      "title": "Drainage and waterlogging",
+      "patterns": [
+        "how do i improve drainage", "waterlogged soil", "soil is always wet",
+        "poor drainage", "water stands in my garden", "roots are rotting",
+        "raising garden beds", "how to make raised beds", "soil too wet",
+        "flooded garden", "rainy season drainage"
+      ],
+      "keywords": ["drainage", "waterlogged", "soggy", "rotting", "flood"],
+      "answer": "Waterlogged soil suffocates roots — it's one of the biggest killers of Philippine gardens during the **wet season**.\n\n**Signs:** yellowing + drooping leaves, sour or rotten smell, moss/algae on the surface, water pooling after rain.\n\n**Fixes**\n1. **Raise your beds** — the single most effective move. Build beds **20–30 cm high** so the root zone sits above the water table.\n2. **Add carbonized rice hull (CRH), coconut coir, or coarse sand** to open up heavy soil.\n3. **Dig a drainage canal or trench** around the plot to lead water away.\n4. **Dig in compost** — it converts tight clay into crumbly, aerated soil.\n5. **Plant in mounds or ridges** for root crops like kamote and kamoteng kahoy.\n6. **Switch crops seasonally** — kangkong and taro actually thrive in wet ground.\n\nNever walk or till soggy soil — you'll compress the structure and make it worse.",
+      "follow_ups": ["How often should I water?", "How do I improve red soil?", "What can I plant during rainy season?"]
+    },
+    {
+      "id": "watering",
+      "title": "Watering schedule",
+      "patterns": [
+        "how often should i water", "watering schedule", "how much water do plants need",
+        "when to water plants", "overwatering", "underwatering", "best time to water",
+        "watering vegetables", "how do i know if my plant needs water",
+        "deep watering", "watering in the philippines", "rainy season watering"
+      ],
+      "keywords": ["water", "watering", "irrigate", "overwatering", "underwatering"],
+      "answer": "The golden rule: **water deeply and less often**, not shallowly and often — deep watering drives roots downward.\n\n**How to check:** push a finger **2–3 cm** into the soil. If it's dry at that depth, water. If it's damp, wait. Don't water on a schedule alone — always check.\n\n**Philippine conditions**\n- **Dry season (Mar–May):** water **daily or every other day**, early morning.\n- **Wet season (Jun–Nov):** often **no watering needed** — the danger flips to overwatering and root rot. Check drainage first.\n\n**Best time:** early morning (6–8 AM). Evening watering invites fungal disease because leaves stay wet overnight.\n\n**How much:** soak the root zone to **15–20 cm depth** rather than sprinkling the surface. For pots, water until it runs out the bottom.\n\n**Tips**\n- **Mulch** to cut water loss by up to 50%.\n- **Sandy (yellow) soil** needs smaller amounts more often — water drains right through.\n- **Black soil** retains water, so water less or you'll waterlog it.",
+      "follow_ups": ["How do I improve drainage?", "How do I make compost?", "Why are my leaves turning yellow?"]
+    },
+    {
+      "id": "mulch",
+      "title": "Mulching",
+      "patterns": [
+        "what is mulch", "should i mulch", "mulching", "mulch for garden",
+        "rice straw mulch", "how to mulch", "benefits of mulch", "cover soil",
+        "grass mulch", "plastic mulch"
+      ],
+      "keywords": ["mulch", "mulching", "straw"],
+      "answer": "**Mulching** means covering the soil surface with a layer of organic material — rice straw, dried leaves, coconut husk, grass clippings, or wood chips.\n\n**Why it's worth it in the Philippines**\n- **Stops weeds** by blocking their light\n- **Cuts water loss** by up to 50% — huge for dry season, and critical for sandy yellow soil\n- **Cools the root zone** during punishing summer heat\n- **Prevents erosion and nutrient leaching** during heavy downpours\n- **Feeds soil life** as it breaks down\n\n**How:** spread a **5–8 cm layer** around plants, keeping it a few centimeters **away from stems** so moisture doesn't cause rot.\n\nDon't mix fresh straw or wood chips deep into the soil — they steal nitrogen while decomposing. Keep mulch **on top**.",
+      "follow_ups": ["How often should I water?", "How do I make compost?", "How do I improve yellow soil?"]
+    },
+    {
+      "id": "pests",
+      "title": "Organic pest control",
+      "patterns": [
+        "how do i control pests", "pests on my plants", "aphids", "fruit fly",
+        "organic pest control", "insects eating my plants", "worms on leaves",
+        "caterpillars", "whiteflies", "snails eating plants", "how to kill pests naturally",
+        "pest management", "leaf eater", "bugs on my plants"
+      ],
+      "keywords": ["pest", "pests", "aphid", "aphids", "fruit fly", "insects", "caterpillar", "snail", "whitefly"],
+      "answer": "Organic pest control follows a simple escalation — start gentle:\n\n**1. Prevent first**\n- Healthy, well-fed plants resist pests better. Don't over-fertilize with nitrogen — soft new growth attracts aphids.\n- **Companion plant** with marigold, basil, or lemongrass to repel insects.\n- **Crop rotation** — never plant the same family in the same bed twice in a row.\n\n**2. Physical control**\n- Pick off caterpillars and snails **by hand** in the early morning.\n- Blast aphids off with a **strong water spray**.\n- Yellow sticky traps for whiteflies and fruit fly.\n\n**3. Simple sprays (make at home)**\n- **Soap spray:** 1 tbsp mild liquid soap per 1 L water — kills soft-bodied insects like aphids. Spray in the evening.\n- **Garlic-chili spray:** blend garlic, hot chili, and water; strain and spray. Repels most chewing insects.\n- **Wood ash** ringed around seedlings deters snails and slugs.\n\n**4. Targeted for the worst offenders**\n- **Fruit fly** (the #1 enemy of ampalaya and talong): bag the young fruit, harvest early, and pick up fallen fruit so larvae can't breed.\n\nAlways test any spray on one leaf first, and never spray in full midday sun.",
+      "follow_ups": ["Why are my ampalaya leaves turning yellow?", "How do I prevent plant disease?", "What can I plant this month?"]
+    },
+    {
+      "id": "disease",
+      "title": "Plant diseases",
+      "patterns": [
+        "plant disease", "fungal disease", "my plant is wilting", "spots on leaves",
+        "leaf spots", "powdery mildew", "plant is dying", "soil borne disease",
+        "damping off", "root rot", "molds on leaves", "blight",
+        "white powder on leaves", "powder on leaves", "white spots on leaves",
+        "white powder on my leaves", "gray powder on leaves", "leaves have white powder"
+      ],
+      "keywords": ["disease", "fungus", "fungal", "mildew", "blight", "wilt", "rot", "spots", "powder", "powdery"],
+      "answer": "Most Philippine garden disease is **fungal**, and most fungal disease comes from **too much moisture**.\n\n**Common problems**\n- **Wilting despite wet soil** → root rot. Stop watering, improve drainage, remove affected plants.\n- **White powder on leaves** → powdery mildew. Improve airflow, spray a baking soda solution (1 tsp per 1 L water + a drop of soap).\n- **Dark spots spreading** → leaf spot. Remove affected leaves, avoid overhead watering.\n- **Seedlings collapsing at the base** → damping off. Use clean soil, don't overwater, ensure airflow.\n\n**Prevention (does most of the work)**\n1. **Water the soil, not the leaves** — wet foliage is where fungi start.\n2. **Water in the morning** so leaves dry before night.\n3. **Space plants** for airflow.\n4. **Rotate crops** — don't grow the same family in the same spot.\n5. **Mulch** to stop soil-borne spores splashing up onto leaves.\n6. **Remove and burn** infected plant material — never compost it.\n\nHealthy soil biology is your best defense: compost-rich soil grows plants that simply resist disease better.",
+      "follow_ups": ["How do I improve drainage?", "How often should I water?", "How do I control pests organically?"]
+    },
+    {
+      "id": "planting_season",
+      "title": "Philippine planting seasons",
+      "patterns": [
+        "what is the best season to plant", "wet season planting", "dry season planting",
+        "philippines planting season", "when is the best time to plant vegetables",
+        "rainy season crops", "planting calendar philippines", "tag-ulan",
+        "tag-araw", "when should i plant", "amihan", "habagat", "wet and dry season"
+      ],
+      "keywords": ["season", "seasons", "wet", "dry", "rainy", "summer", "calendar", "month"],
+      "answer": "The Philippines has two main seasons, and they change what you can grow:\n\n**Wet Season / Habagat (June–November)**\n- Abundant rain, high humidity, fungal pressure.\n- **Biggest risk:** waterlogging and root rot — raise your beds and check drainage.\n- **Good crops:** cassava (plant May–July), kangkong, taro, mung bean, corn.\n- Best time to **plant fruit trees** — they establish with minimal watering.\n\n**Dry Season / Amihan (December–May)**\n- Cool, dry months (Dec–Feb) are the **best growing window of the year** for vegetables.\n- **Best for:** pechay, ampalaya, eggplant, sitaw, tomato — the classic *cool dry* vegetable crops.\n- **Risk:** drought stress by March–May. Mulch heavily, water deeply.\n\n**The short version:** almost everything grows best when planted at the **start of the dry season (Oct–Feb)**. The rainy season is the time for root crops and water-tolerant crops.\n\nAsk me *\"what can I plant this month?\"* and I'll match crops to the current month for you.",
+      "follow_ups": ["What can I plant this month?", "How do I improve drainage?", "What can I plant during rainy season?"]
+    },
+    {
+      "id": "what_to_plant_now",
+      "title": "What to plant now",
+      "patterns": [
+        "what can i plant this month", "what can i plant now", "what should i plant now",
+        "what to plant this month", "what can i plant right now", "planting now",
+        "what crops can i plant now", "what can i plant today", "suggest crops for this month",
+        "what should i plant this season", "what can i grow now", "current planting season"
+      ],
+      "keywords": ["plant", "planting", "now", "this month", "sow"],
+      "action": "plant_now",
+      "answer": "Let me check what suits the current month in the Philippines..."
+    },
+    {
+      "id": "germination",
+      "title": "Seeds and germination",
+      "patterns": [
+        "how long do seeds take to germinate", "germination time", "how to start seeds",
+        "seed starting", "how to germinate seeds", "seedling care",
+        "how do i raise seedlings", "transplanting seedlings", "nursery",
+        "how deep to plant seeds", "seeds not sprouting"
+      ],
+      "keywords": ["germinate", "germination", "seed", "seeds", "seedling", "sprout"],
+      "answer": "**Germination basics**\n- **Sow at a depth of 2–3 times the seed's diameter.** Deeper than that and many seeds rot.\n- Keep the medium **consistently moist — never soggy**. A spray bottle beats a watering can.\n- **Warmth speeds germination.** Philippine ambient heat is usually enough; no heating needed.\n- **Light:** most seeds germinate in darkness, but once sprouted, seedlings need full sun or they go leggy and pale.\n\n**Typical germination times**\n- Pechay: **3–5 days** (fastest)\n- Sitaw: 4–8 days\n- Ampalaya: 5–10 days\n- Talong: 7–14 days\n- Kamote: 7–10 days\n\n**Raising seedlings**\n1. Use a light mix — soil + compost + CRH.\n2. Sow in trays or recycled containers with drainage holes.\n3. **Harden off** before transplanting: move them into partial sun for 3–5 days so they don't shock.\n4. Transplant in the **late afternoon** or on a cloudy day, and water immediately.",
+      "follow_ups": ["What can I plant this month?", "How long until harvest?", "How do I make compost?"]
+    },
+    {
+      "id": "harvest",
+      "title": "Days to harvest",
+      "patterns": [
+        "how long until harvest", "days to harvest", "when do i harvest",
+        "harvest time", "how long does it take to grow", "when is my plant ready",
+        "how to know when to harvest", "crop duration", "how many days to grow pechay"
+      ],
+      "keywords": ["harvest", "harvesting", "days", "ready"],
+      "answer": "Here's what to expect in the Philippines:\n\n- **Pechay** — germinates 3–5 days, harvest **30–45 days** (fastest)\n- **Sitaw (string beans)** — 4–8 days, harvest 50–65 days\n- **Ampalaya** — 5–10 days, harvest 60–80 days\n- **Talong (eggplant)** — 7–14 days, harvest 80–100 days\n- **Kamote** — 7–10 days, harvest 90–120 days\n- **Kamoteng kahoy** — 7–14 days, harvest 240–300 days\n\n**Tips**\n- **Pechay** is the fastest return on effort — best choice if you're just starting.\n- **Leafy greens:** harvest outer leaves and the plant keeps producing.\n- **Sitaw/ampalaya:** pick pods young and often — regular picking *increases* yield.\n- **Root crops:** watch for the tops yellowing and dying back, that's your signal.\n- **Harvest in the morning** when it's cool for the best shelf life.",
+      "follow_ups": ["What can I plant this month?", "How do I store my harvest?", "How do I control pests organically?"]
+    },
+    {
+      "id": "container_gardening",
+      "title": "Container and urban gardening",
+      "patterns": [
+        "container gardening", "urban gardening", "how to grow in pots", "potting soil",
+        "indoor plants soil", "rooftop gardening", "small space gardening",
+        "what can i grow in containers", "balcony garden", "soil for pots",
+        "growing vegetables in pots"
+      ],
+      "keywords": ["container", "pots", "pot", "urban", "balcony", "rooftop", "indoor"],
+      "answer": "Container gardening works well in the Philippines — you control the soil, which solves most ground problems.\n\n**Potting mix recipe (by volume)**\n- **1 part garden soil**\n- **1 part compost**\n- **1 part carbonized rice hull (CRH) or coconut coir** — for drainage and aeration\n\n**Key rules**\n1. **Always use pots with drainage holes.** Soggy pots rot roots faster than anything.\n2. **Bigger is better** — leafy greens need 15–20 cm depth, tomatoes and eggplant need at least **25–30 cm**.\n3. **Water more often than in ground beds** — containers dry out fast, especially small ones in full sun.\n4. **Feed regularly** — nutrients wash out of pots quickly. Side-dress with vermicast every 3–4 weeks.\n5. **Move pots** to chase sun in the morning and shelter from harsh midday heat.\n\n**Best container crops:** pechay, kangkong, sili/chili, tomato, okra, herbs (basil, mint, lemongrass), and even a staked ampalaya on a balcony trellis.",
+      "follow_ups": ["How often should I water?", "What organic fertilizer is best?", "What can I plant this month?"]
+    },
+    {
+      "id": "crop_rotation",
+      "title": "Crop rotation and soil fertility",
+      "patterns": [
+        "crop rotation", "soil fertility", "how to keep soil healthy",
+        "improve soil health", "nitrogen fixing", "legumes", "green manure",
+        "cover crops", "soil getting tired", "resting the soil", "soil conservation",
+        "sustainable farming", "organic farming soil"
+      ],
+      "keywords": ["rotation", "fertility", "legume", "green manure", "cover crop", "sustainable"],
+      "answer": "Soil is a living system — **how you rotate crops** matters more than how much fertilizer you buy.\n\n**Rotate by plant family**\nNever follow a crop with another from the same family (e.g. talong → kamatis → sili are all nightshades). Pests and diseases build up in the soil when you do.\n\n**A simple 3-season rotation**\n1. **Leafy** (pechay — heavy nitrogen feeder)\n2. **Legume** (sitaw or munggo — **fixes nitrogen** back into the soil)\n3. **Root** (kamote or cassava — uses nutrients lower down)\n\n**Rebuild fertility**\n- **Plant legumes (munggo, sitaw) as green manure** — let them grow, then cut and dig them in. Free nitrogen.\n- **Add compost every season** — this is the single best long-term investment.\n- **Mulch** to protect the soil surface and feed soil life.\n- **Never leave soil bare** — bare soil bakes and erodes in tropical sun and rain.\n- **Minimize deep tilling** — it destroys the fungal networks that make soil work.\n\n**Signs of tired soil:** pale plants, poor yields, hard crusting surface, few earthworms. Compost + rotation + mulch will bring it back.",
+      "follow_ups": ["How do I make compost?", "What can I plant this month?", "How do I test soil pH?"]
+    },
+    {
+      "id": "soil_types_overview",
+      "title": "Soil types overview",
+      "patterns": [
+        "what are the soil types", "types of soil", "soil types in the philippines",
+        "how do i know my soil type", "identify my soil", "what kind of soil do i have",
+        "difference between soil types", "which soil is best", "best soil for vegetables"
+      ],
+      "keywords": ["soil type", "types", "identify", "kind", "which soil"],
+      "answer": "I work with the **three main soil types** you'll find in Philippine gardens:\n\n**Black Soil**\n- Rich in organic matter and humus; highly fertile.\n- Holds moisture well, moderate/good drainage, pH **6.0–7.5**.\n- **Best of the three** — grows almost anything with minimal amendment.\n\n**Red Soil (laterite)**\n- Iron-rich, acidic, well-draining when loose but **packs hard when dry**.\n- pH **5.0–6.0** — needs lime and lots of organic matter.\n- Good for cassava, kamote, and root crops.\n\n**Yellow Soil (sandy/loamy)**\n- Coarse, porous, **drains very fast and leaches nutrients**.\n- pH 5.5–7.0 — needs heavy compost and frequent feeding.\n- Good for root crops, tough on thirsty leafy greens.\n\n**Not sure which you have?** Upload a photo from the sidebar menu and I'll analyze it for you.",
+      "follow_ups": ["What can I plant this month?", "How do I improve red soil?", "How do I improve yellow soil?"]
+    },
+    {
+      "id": "typhoon",
+      "title": "Typhoon and heavy rain protection",
+      "patterns": [
+        "how to protect plants from typhoon", "strong rain", "storm damage",
+        "protect plants from heavy rain", "typhoon season gardening", "wind damage",
+        "rain damage plants", "how to prepare garden for storm"
+      ],
+      "keywords": ["typhoon", "storm", "wind", "heavy rain", "protect"],
+      "answer": "The Philippines gets around **20 typhoons a year**, so storm-proofing is part of gardening here.\n\n**Before a storm**\n1. **Harvest what's ready** — don't gamble on fruit surviving.\n2. **Stake and tie** tall plants (tomato, eggplant, ampalaya) securely but with soft ties so stems aren't cut.\n3. **Remove trellises and nets** that act like sails — or lay vines down flat.\n4. **Clear drainage canals** so water has somewhere to go.\n5. **Move pots** to a sheltered wall or indoors if possible.\n6. **Mulch lightly** so it doesn't blow away, and check your raised beds are stable.\n\n**After the storm**\n1. **Re-establish drainage** and check for waterlogged roots.\n2. **Remove broken or diseased foliage** quickly — wounds invite fungus.\n3. **Rinse mud off leaves** with clean water so they can photosynthesize again.\n4. **Don't fertilize immediately** — let plants recover for a week first.\n5. **Watch for fungal disease** in the following weeks — the risk spikes after storms.\n\n**Design for resilience:** raised beds, windbreaks (lemongrass, banana, or bamboo screens), and quick-maturing crops like pechay that finish before the worst months.",
+      "follow_ups": ["How do I improve drainage?", "What can I plant during rainy season?", "How do I prevent plant disease?"]
+    }
+  ]
+}
