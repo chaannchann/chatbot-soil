@@ -40,6 +40,80 @@ Everything runs on the machine. No external AI, weather, or geocoding APIs are u
 - Responsive layout with a mobile sidebar drawer
 - Light and dark theme toggle that remembers the choice and follows the system preference by default
 
+ Suggested Questions
+
+- What can I plant this month?
+- How do I test soil pH? [How do I test pH?]
+- How do I make compost? [How to make compost?]
+- What organic fertilizer is best for sandy soil in the Philippines? [Best organic fertilizer?]
+- How often should I water my plants? [Watering schedule]
+
+- Greeting — What can I plant this month? / How do I test soil pH? / How do I make compost?
+- Capabilities — What can I plant this month? / How much compost should I mix in? / How often should I water?
+- Thanks — What can I plant this month? / How do I improve my soil?
+- Soil pH basics — How do I test soil pH? / How do I fix acidic soil? / What is the pH of red soil?
+- Testing soil pH — How do I fix acidic soil? / What is the ideal pH for pechay? / How do I make compost?
+- Correcting soil pH — How do I test soil pH? / What is the pH of red soil? / How do I improve red soil?
+- Making compost — How much compost should I mix with my soil? / How do I make organic fertilizer? / How do I improve yellow soil?
+- How much compost to mix — How do I make compost? / How do I improve yellow soil? / What is the pH of my soil?
+- Organic fertilizers — How much compost should I mix in? / How do I improve yellow soil? / How often should I fertilize?
+- Fertilizer application timing — What organic fertilizer is best? / How often should I water? / Why are my leaves turning yellow?
+- Yellowing leaves — How often should I water? / How do I test soil pH? / What organic fertilizer is best?
+- Ampalaya (bitter gourd) care — What organic fertilizer is best? / How do I control pests organically? / What can I plant this month?
+- Specific crop care — What can I plant this month? / Why are my leaves turning yellow? / How often should I water?
+- Black soil — What can I plant this month? / How much compost should I mix in? / How often should I water? q
+- Red soil — How do I fix acidic soil? / How much compost should I mix in? / What can I plant this month?
+- Yellow / sandy soil — What organic fertilizer is best for sandy soil? / How much compost should I mix in? / What can I plant this month?
+- Drainage and waterlogging — How often should I water? / How do I improve red soil? / What can I plant during rainy season?
+- Watering schedule — How do I improve drainage? / How do I make compost? / Why are my leaves turning yellow?
+- Mulching — How often should I water? / How do I make compost? / How do I improve yellow soil?
+- Organic pest control — Why are my ampalaya leaves turning yellow? / How do I prevent plant disease? / What can I plant this month?
+- Plant diseases — How do I improve drainage? / How often should I water? / How do I control pests organically?
+- Philippine planting seasons — What can I plant this month? / How do I improve drainage? / What can I plant during rainy season?
+- What to plant now — no follow-up chips, because the reply already contains the month's crop list.
+- Seeds and germination — What can I plant this month? / How long until harvest? / How do I make compost?
+- Days to harvest — What can I plant this month? / How do I store my harvest? / How do I control pests organically?
+- Container and urban gardening — How often should I water? / What organic fertilizer is best? / What can I plant this month?
+- Crop rotation and soil fertility — How do I make compost? / What can I plant this month? / How do I test soil pH?
+- Soil types overview — What can I plant this month? / How do I improve red soil? / How do I improve yellow soil?
+- Typhoon and heavy rain protection — How do I improve drainage? / What can I plant during rainy season? / How do I prevent plant disease?
+
+Straight up questions:
+
+1. Best organic fertilizer?
+2. How do I control pests organically?
+3. How do I fix acidic soil?
+4. How do I improve drainage?
+5. How do I improve my soil?
+6. How do I improve red soil?
+7. How do I improve yellow soil?
+8. How do I make compost?
+9. How do I make organic fertilizer?
+10. How do I prevent plant disease?
+11. How do I store my harvest?
+12. How do I test pH?
+13. How do I test soil pH?
+14. How long until harvest?
+15. How much compost should I mix in?
+16. How much compost should I mix with my soil?
+17. How often should I fertilize?
+18. How often should I water my plants?
+19. How often should I water?
+20. How to make compost?
+21. Watering schedule
+22. What can I plant during rainy season?
+23. What can I plant now?
+24. What can I plant this month?
+25. What is the ideal pH for pechay?
+26. What is the pH of my soil?
+27. What is the pH of red soil?
+28. What is the right soil pH for vegetables?
+29. What organic fertilizer is best for sandy soil in the Philippines?
+30. What organic fertilizer is best for sandy soil?
+31. What organic fertilizer is best?
+32. Why are my ampalaya leaves turning yellow?
+33. Why are my leaves turning yellow?
+
  Database
 
 Seven tables:
@@ -84,18 +158,17 @@ soilmate/
 
  How to Run
 
-1. Create the database:
-   sql
-   CREATE DATABASE soilmate_db;
-   
+For a fresh laptop, follow `HOW_TO_SET_UP.md` in the repository root: it covers copying the untracked files, creating the database by hand in pgAdmin, and starting the app. The summary below is the same flow.
 
-2. Load the schema, soil profiles, and crop catalog:
+1. Create the database (in pgAdmin: Databases → Create → Database…, name it `soilmate_db`):
+
+2. Load the schema, soil profiles, and crop catalog (in pgAdmin: open `database.sql` in the Query Tool and press F5, then run the seeder):
    powershell
-   psql -U postgres -d soilmate_db -f database.sql
    .venv\Scripts\python.exe seed.py
    
 
-   For an existing database, apply `migration.sql` first, then run `seed.py`.
+   For a database created before the planting calendar, scan/chat history, and
+   user accounts existed, apply `migration.sql` first, then run `seed.py`.
    The seeder also renames legacy rows such as `concrete_surface` to their
    canonical names without losing crop compatibility links.
 
@@ -117,6 +190,9 @@ soilmate/
 
 5. Open `http://127.0.0.1:5000`.
 
+ Setup Questions and Answers
+
+
  Tests
 
 powershell
@@ -125,13 +201,5 @@ powershell
 .venv\Scripts\python.exe tests\test_history.py
 
 
-Covers 39 chatbot intent cases, soil detection, conversation context, out-of-domain questions, every soil class/name variant, and history privacy scoping.
 
- Notes
 
-- The only external resource is the Tailwind CSS CDN. All data and processing stay local.
-- The classifier recognizes 10 soil and surface classes.
-- Guest sessions are ephemeral: no scans or chats are written to the database until the user logs in. Account history is owner-scoped by `user_id` only.
-- Signed-in users can delete their own history: the sidebar's "Clear" button removes all scans, chats, and uploaded photos, while the 3-dot menu on a history row deletes just that scan and its photo. Guests cannot delete anything.
-- The app uses the Flask development server; use a production server for deployment.
-- Uploaded photos are stored in `static/uploads/`.
