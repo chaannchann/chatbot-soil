@@ -399,6 +399,22 @@ soilImageInput.addEventListener('change', (e) => {
     }
 });
 
+function clearImageSelection() {
+    selectedFile = null;
+    if (soilImageInput) soilImageInput.value = '';
+    if (chatImageInput) chatImageInput.value = '';
+    if (imagePreview) {
+        if (imagePreview.src && imagePreview.src.startsWith('blob:')) {
+            URL.revokeObjectURL(imagePreview.src);
+        }
+        imagePreview.src = '';
+    }
+    if (imagePreviewContainer) {
+        imagePreviewContainer.classList.add('hidden');
+    }
+}
+
+// Image Analysis Trigger (sidebar button and chat camera button share this)
 // Image Analysis Trigger (sidebar button and chat camera button share this)
 // Image Analysis Trigger (sidebar button and chat camera button share this)
 async function analyzeSelectedImage() {
@@ -406,8 +422,12 @@ async function analyzeSelectedImage() {
 
     closeSidebar();
 
-    // 1. Show the ACTUAL photo in the user's message bubble
-    const previewUrl = URL.createObjectURL(selectedFile);
+    // 1. Save file to a local variable FIRST before clearing the sidebar UI
+    const fileToUpload = selectedFile;
+    clearImageSelection();
+
+    // 2. Show the photo in the chat bubble
+    const previewUrl = URL.createObjectURL(fileToUpload);
     const userPhotoHtml = `
         <div class="space-y-1.5">
             <img src="${previewUrl}" alt="Soil sample" 
@@ -419,7 +439,7 @@ async function analyzeSelectedImage() {
     `;
     appendMessage('user', userPhotoHtml, true);
 
-    // 2. Temporary bot loading indicator (with spinner)
+    // 3. Bot loading indicator with spinner
     const loadingWrapper = document.createElement('div');
     loadingWrapper.className = 'flex gap-3 max-w-2xl message-enter';
     loadingWrapper.innerHTML = `
@@ -434,8 +454,9 @@ async function analyzeSelectedImage() {
     chatFeed.appendChild(loadingWrapper);
     chatFeed.scrollTop = chatFeed.scrollHeight;
 
+    // 4. Send the actual file in FormData
     const formData = new FormData();
-    formData.append('image', selectedFile);
+    formData.append('image', fileToUpload);
     formData.append('session_id', SESSION_ID);
 
     try {
@@ -445,25 +466,22 @@ async function analyzeSelectedImage() {
         });
         const data = await res.json();
 
-        // Remove the temporary loading bubble when response arrives
+        // Remove spinner
         if (loadingWrapper.parentNode) {
             loadingWrapper.parentNode.removeChild(loadingWrapper);
         }
 
-        // Check if server returned an error
         if (!res.ok || data.error) {
             appendMessage('bot', `<strong>Server Error:</strong> ${data.error || 'Server returned an error'}`, true);
             return;
         }
 
-        // Check if photo was rejected or unidentified
         if (data.identified === false) {
             appendMessage('bot', renderUnidentifiedCard(data), true);
             refreshScans();
             return;
         }
 
-        // Render the full soil recommendation card
         lastSoilType = data.soil_type;
         const cardHtml = renderSoilAnalysisCard(data);
         appendMessage('bot', cardHtml, true);
@@ -695,6 +713,7 @@ function startNewChat() {
     CONVERSATION_ID = createSessionId();
     localStorage.setItem(CONVERSATION_KEY, CONVERSATION_ID);
     lastSoilType = null;
+    clearImageSelection(); // <--- ADD THIS LINE
     resetFeed();
     highlightActiveConversation();
     userInput.value = '';
@@ -996,7 +1015,6 @@ async function deleteSingleConversation(convoId) {
 
         const hist = await fetchHistory();
         if (hist && hist.conversations) renderConversations(hist.conversations);
-        appendMessage('bot', 'Conversation deleted.');
     } catch (err) {
         appendMessage('bot', `Failed to delete conversation: ${err.message}`);
     }
@@ -1020,7 +1038,6 @@ if (clearChatsBtn) {
 
             startNewChat();
             renderConversations([]);
-            appendMessage('bot', `All chat conversations have been cleared (**${data.chats}** messages deleted).`);
         } catch (err) {
             appendMessage('bot', `Failed to clear chats: ${err.message}`);
         } finally {
@@ -1138,12 +1155,29 @@ async function openScan(scanId) {
             return;
         }
 
+        // 1. Clean the feed so previous chats don't linger
+        resetFeed();
+
+        // 2. Display the saved photo if available
+        if (data.filename) {
+            const photoHtml = `
+                <div class="space-y-1.5">
+                    <img src="/static/uploads/${encodeURIComponent(data.filename)}" alt="Saved scan photo"
+                         class="w-48 sm:w-64 h-36 sm:h-48 object-cover rounded-xl shadow-md border border-white/20">
+                    <p class="text-[11px] text-emerald-100/90 font-semibold">📷 Saved soil sample</p>
+                </div>
+            `;
+            appendMessage('user', photoHtml, true);
+        }
+
+        // 3. Render the specific result card
         if (data.identified === false) {
             const pct = ((data.confidence || 0) * 100).toFixed(1);
-            appendMessage('bot', `<strong>Previous scan could not be identified.</strong><br>${data.message}<br><span class="text-xs text-slate-400 dark:text-slate-500">Confidence: ${pct}%</span>`, true);
+            appendMessage('bot', `<strong>Previous scan could not be identified.</strong><br>${data.message}<br><span class="text-xs text-slate-400">Confidence: ${pct}%</span>`, true);
             return;
         }
 
+        lastSoilType = data.soil_type;
         appendMessage('bot', renderSoilAnalysisCard(data), true);
     } catch (err) {
         appendMessage('bot', `Failed to open scan: ${err.message}`);
@@ -1206,10 +1240,7 @@ async function clearHistory() {
         lastSoilType = null;
         resetFeed();
         renderScanHistory([]);
-        appendMessage(
-            'bot',
-            `Your history has been cleared. **${data.scans}** scan(s) and **${data.chats}** chat message(s) were deleted.`
-        );
+        renderConversations([]);
     } catch (err) {
         appendMessage('bot', `Failed to clear history: ${err.message}`);
     } finally {
@@ -1253,18 +1284,19 @@ async function loadHistory() {
 
     hasSavedChats = !!(data.chats && data.chats.length);
     renderScanHistory(data.scans, hasSavedChats);
-    renderConversations(data.conversations); // <--- ADD THIS LINE!
+    renderConversations(data.conversations);
 
-    if (!lastSoilType) {
-        const latest = (data.scans || []).find(s => s.identified);
-        if (latest) lastSoilType = latest.predicted_soil;
+    // If an active conversation exists in localStorage, open only THAT conversation
+    const activeConvoId = localStorage.getItem(CONVERSATION_KEY);
+    if (activeConvoId && data.conversations && data.conversations.some(c => c.conversation_id === activeConvoId)) {
+        await openConversation(activeConvoId);
+    } else if (data.conversations && data.conversations.length > 0) {
+        // Otherwise open the newest conversation
+        await openConversation(data.conversations[0].conversation_id);
+    } else {
+        resetFeed();
     }
-
-    (data.chats || []).forEach(m => {
-        appendMessage(m.role === 'user' ? 'user' : 'bot', m.message);
-    });
 }
-
 // ------------------------- ACCOUNT -------------------------
 const authGate = document.getElementById('authGate');
 const authForm = document.getElementById('authForm');
@@ -1592,6 +1624,7 @@ async function onAuthSuccess(data) {
     gateEmail.value = '';
     gatePassword.value = '';
     hideGate();
+    clearImageSelection(); // <--- ADD THIS LINE
     updateAccountUI(true, data.username, data.avatar);
     await refreshAfterAuth();
     appendMessage('bot', `Welcome, **${data.username}**! Your scans and chats are saved to this account.`);
@@ -1613,10 +1646,9 @@ async function logout() {
     updateAccountUI(false);
     resetFeed();
     lastSoilType = null;
+    clearImageSelection(); // <--- ADD THIS LINE
 
-    // Guest sessions have no saved history
     renderHistoryLoginPrompt();
-
     showGate('login');
 }
 
