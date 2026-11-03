@@ -23,17 +23,19 @@ def _session_for_storage(session_id, user_id):
     return None if user_id is not None else session_id
 
 
-def log_chat(session_id, role, message, intent=None, confidence=None, user_id=None):
+def log_chat(session_id, role, message, intent=None, confidence=None,
+             user_id=None, conversation_id=None):
     """Store one chat message (role is 'user' or 'bot')."""
     stored_session = _session_for_storage(session_id, user_id)
     try:
         with db_cursor(commit=True) as cur:
             cur.execute(
                 """
-                INSERT INTO chat_logs (session_id, user_id, role, message, intent, confidence)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO chat_logs
+                    (session_id, user_id, conversation_id, role, message, intent, confidence)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
-                (stored_session, user_id, role, message, intent, confidence),
+                (stored_session, user_id, conversation_id, role, message, intent, confidence),
             )
         return True
     except Exception as error:  # noqa: BLE001 - logging must never break a request
@@ -159,6 +161,86 @@ def recent_chats(session_id=None, user_id=None, limit=40):
         return []
 
 
+def _conversation_filter(conversation_id):
+    """SQL condition and params that select one conversation.
+
+    Messages written before conversation ids were introduced have no value,
+    so they are grouped under the synthetic ``"legacy"`` id.
+    """
+    if not conversation_id or conversation_id == "legacy":
+        return "conversation_id IS NULL", []
+    return "conversation_id = %s", [conversation_id]
+
+
+def recent_conversations(user_id, limit=20):
+    """Most recent conversations for one account, newest first.
+
+    A conversation is the set of chat rows sharing a ``conversation_id``.
+    Older rows without one are reported together as ``legacy``.
+    """
+    if user_id is None:
+        return []
+
+    sql = """
+        SELECT g.conversation_id,
+               MIN(g.created_at) AS started_at,
+               MAX(g.created_at) AS updated_at,
+               COUNT(*) AS message_count,
+               (
+                   SELECT c2.message
+                   FROM chat_logs c2
+                   WHERE c2.user_id = %s
+                     AND COALESCE(c2.conversation_id, 'legacy') = g.conversation_id
+                     AND c2.role = 'user'
+                   ORDER BY c2.created_at ASC, c2.id ASC
+                   LIMIT 1
+               ) AS title
+        FROM (
+            SELECT COALESCE(conversation_id, 'legacy') AS conversation_id,
+                   created_at
+            FROM chat_logs
+            WHERE user_id = %s
+        ) AS g
+        GROUP BY g.conversation_id
+        ORDER BY updated_at DESC
+        LIMIT %s
+    """
+    params = [user_id, user_id, limit]
+
+    try:
+        with db_cursor() as cur:
+            cur.execute(sql, params)
+            return [dict(row) for row in cur.fetchall()]
+    except Exception as error:  # noqa: BLE001
+        _warn("load conversations", error)
+        return []
+
+
+def conversation_messages(user_id, conversation_id, limit=200):
+    """Messages in one conversation, oldest first."""
+    if user_id is None:
+        return []
+
+    condition, condition_params = _conversation_filter(conversation_id)
+    sql = f"""
+        SELECT id, role, message, intent, confidence, created_at
+        FROM chat_logs
+        WHERE user_id = %s AND {condition}
+        ORDER BY created_at DESC, id DESC
+        LIMIT %s
+    """
+    params = [user_id] + condition_params + [limit]
+
+    try:
+        with db_cursor() as cur:
+            cur.execute(sql, params)
+            rows = [dict(row) for row in cur.fetchall()]
+        return list(reversed(rows))
+    except Exception as error:  # noqa: BLE001
+        _warn("load conversation", error)
+        return []
+
+
 def get_scan(scan_id, session_id=None, user_id=None):
     """Fetch a single scan, scoped to the current user or session."""
     sql = """
@@ -177,3 +259,26 @@ def get_scan(scan_id, session_id=None, user_id=None):
     except Exception as error:  # noqa: BLE001
         _warn("load scan", error)
         return None
+
+def delete_conversation(user_id, conversation_id):
+    """Delete all messages belonging to one conversation owned by user_id."""
+    if user_id is None:
+        return 0
+
+    condition, condition_params = _conversation_filter(conversation_id)
+    with db_cursor(commit=True) as cur:
+        cur.execute(
+            f"DELETE FROM chat_logs WHERE user_id = %s AND {condition}",
+            [user_id] + condition_params,
+        )
+        return cur.rowcount
+
+
+def delete_all_chats(user_id):
+    """Delete all chat history owned by user_id."""
+    if user_id is None:
+        return 0
+
+    with db_cursor(commit=True) as cur:
+        cur.execute("DELETE FROM chat_logs WHERE user_id = %s", (user_id,))
+        return cur.rowcount

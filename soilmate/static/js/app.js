@@ -1,4 +1,5 @@
 const chatFeed = document.getElementById('chatFeed');
+const chatHistoryEl = document.getElementById('chatHistory');
 const chatForm = document.getElementById('chatForm');
 const userInput = document.getElementById('userInput');
 const soilImageInput = document.getElementById('soilImageInput');
@@ -36,6 +37,16 @@ let SESSION_ID = localStorage.getItem('soilmate_session');
 if (!SESSION_ID) {
     SESSION_ID = createSessionId();
     localStorage.setItem('soilmate_session', SESSION_ID);
+}
+
+// Groups saved messages into reopenable conversations in the sidebar. It is
+// separate from SESSION_ID so the chatbot can reset context without losing
+// the conversation that is already saved.
+const CONVERSATION_KEY = 'soilmate_conversation';
+let CONVERSATION_ID = localStorage.getItem(CONVERSATION_KEY);
+if (!CONVERSATION_ID) {
+    CONVERSATION_ID = createSessionId();
+    localStorage.setItem(CONVERSATION_KEY, CONVERSATION_ID);
 }
 
 // ------------------------- THEME -------------------------
@@ -327,6 +338,7 @@ async function sendMessage(text) {
             body: JSON.stringify({
                 message: text,
                 session_id: SESSION_ID,
+                conversation_id: CONVERSATION_ID,
                 soil_type: lastSoilType,
                 lang: chatLanguage
             })
@@ -339,6 +351,7 @@ async function sendMessage(text) {
         if (isAuthenticatedUser) {
             hasSavedChats = true;
             setClearHistoryVisible(true);
+            fetchHistory().then(d => { if (d && d.conversations) renderConversations(d.conversations); });
         }
     } catch (err) {
         appendMessage('bot', chatLanguage === 'tl'
@@ -387,12 +400,39 @@ soilImageInput.addEventListener('change', (e) => {
 });
 
 // Image Analysis Trigger (sidebar button and chat camera button share this)
+// Image Analysis Trigger (sidebar button and chat camera button share this)
 async function analyzeSelectedImage() {
     if (!selectedFile) return;
 
     closeSidebar();
-    appendMessage('user', `Uploaded image: <strong>${selectedFile.name}</strong> for soil diagnosis.`, true);
-    appendMessage('bot', 'Analyzing soil texture using trained neural network...');
+
+    // 1. Show the ACTUAL photo in the user's message bubble
+    const previewUrl = URL.createObjectURL(selectedFile);
+    const userPhotoHtml = `
+        <div class="space-y-1.5">
+            <img src="${previewUrl}" alt="Soil sample" 
+                 class="w-48 sm:w-64 h-36 sm:h-48 object-cover rounded-xl shadow-md border border-white/20">
+            <p class="text-[11px] text-emerald-100/90 font-semibold flex items-center gap-1">
+                <span>📷</span> Soil sample submitted
+            </p>
+        </div>
+    `;
+    appendMessage('user', userPhotoHtml, true);
+
+    // 2. Temporary bot loading indicator (with spinner)
+    const loadingWrapper = document.createElement('div');
+    loadingWrapper.className = 'flex gap-3 max-w-2xl message-enter';
+    loadingWrapper.innerHTML = `
+        <div class="bg-white text-slate-800 p-3 sm:p-4 rounded-2xl rounded-tl-none border border-slate-200 text-sm shadow-xs flex items-center gap-2.5 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700">
+            <svg class="animate-spin h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            <span class="text-xs sm:text-sm font-medium">Analyzing soil texture using trained neural network...</span>
+        </div>
+    `;
+    chatFeed.appendChild(loadingWrapper);
+    chatFeed.scrollTop = chatFeed.scrollHeight;
 
     const formData = new FormData();
     formData.append('image', selectedFile);
@@ -405,26 +445,34 @@ async function analyzeSelectedImage() {
         });
         const data = await res.json();
 
-        // 1. Check if the server had a crash/error
+        // Remove the temporary loading bubble when response arrives
+        if (loadingWrapper.parentNode) {
+            loadingWrapper.parentNode.removeChild(loadingWrapper);
+        }
+
+        // Check if server returned an error
         if (!res.ok || data.error) {
             appendMessage('bot', `<strong>Server Error:</strong> ${data.error || 'Server returned an error'}`, true);
             return;
         }
 
-        // 2. Check if the photo could not be turned into a reliable prediction
+        // Check if photo was rejected or unidentified
         if (data.identified === false) {
             appendMessage('bot', renderUnidentifiedCard(data), true);
             refreshScans();
             return;
         }
 
-        // 3. Success: Render the full recommendation card
+        // Render the full soil recommendation card
         lastSoilType = data.soil_type;
         const cardHtml = renderSoilAnalysisCard(data);
         appendMessage('bot', cardHtml, true);
         refreshScans();
 
     } catch (err) {
+        if (loadingWrapper.parentNode) {
+            loadingWrapper.parentNode.removeChild(loadingWrapper);
+        }
         appendMessage('bot', `Failed to communicate with server: ${err.message}`);
     }
 }
@@ -644,8 +692,11 @@ sidebarBackdrop.addEventListener('click', closeSidebar);
 function startNewChat() {
     SESSION_ID = createSessionId();
     localStorage.setItem('soilmate_session', SESSION_ID);
+    CONVERSATION_ID = createSessionId();
+    localStorage.setItem(CONVERSATION_KEY, CONVERSATION_ID);
     lastSoilType = null;
     resetFeed();
+    highlightActiveConversation();
     userInput.value = '';
     closeSidebar();
     userInput.focus();
@@ -813,6 +864,193 @@ function renderScanHistory(scans, hasChats = hasSavedChats) {
             </div>
         `;
     }).join('');
+}
+
+// ------------------------- CONVERSATION HISTORY RENDERING -------------------------
+function highlightActiveConversation() {
+    if (!chatHistoryEl) return;
+    chatHistoryEl.querySelectorAll('.chat-convo-item').forEach(item => {
+        const isActive = item.dataset.convoId === CONVERSATION_ID;
+        item.classList.toggle('bg-emerald-800', isActive);
+        item.classList.toggle('bg-emerald-900/40', !isActive);
+    });
+}
+
+const clearChatsBtn = document.getElementById('clearChatsBtn');
+
+function setClearChatsVisible(visible) {
+    if (!clearChatsBtn) return;
+    clearChatsBtn.classList.toggle('hidden', !visible);
+    clearChatsBtn.classList.toggle('inline-flex', visible);
+}
+
+function renderConversations(conversations) {
+    if (!chatHistoryEl) return;
+
+    const hasConvos = !!(conversations && conversations.length);
+    setClearChatsVisible(hasConvos);
+
+    if (!hasConvos) {
+        chatHistoryEl.innerHTML = '<p class="text-xs text-emerald-400">No conversations yet.</p>';
+        return;
+    }
+
+    chatHistoryEl.innerHTML = conversations.map(c => {
+        const title = escapeHtml(c.title || 'Chat conversation');
+        const count = c.message_count || 0;
+        const convoId = escapeHtml(c.conversation_id);
+        const isActive = c.conversation_id === CONVERSATION_ID;
+
+        return `
+            <div class="chat-convo-item relative rounded-lg transition mb-1.5 ${isActive ? 'bg-emerald-800' : 'bg-emerald-900/40 hover:bg-emerald-800/70'}" data-convo-id="${convoId}">
+                <button type="button" class="convo-open w-full text-left p-2.5 pr-8 flex flex-col gap-0.5" data-convo-id="${convoId}">
+                    <span class="text-xs font-semibold text-white truncate block">${title}</span>
+                    <span class="text-[10px] text-emerald-300 block">${count} messages</span>
+                </button>
+                <button type="button"
+                        class="convo-menu-btn absolute top-2 right-1.5 p-1 rounded-md text-emerald-200/70 hover:text-white hover:bg-white/15 transition"
+                        data-convo-menu="${convoId}" aria-label="Options for this conversation"
+                        aria-haspopup="true" aria-expanded="false">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <circle cx="12" cy="5" r="1.7"/>
+                        <circle cx="12" cy="12" r="1.7"/>
+                        <circle cx="12" cy="19" r="1.7"/>
+                    </svg>
+                </button>
+                <div class="convo-menu hidden absolute right-1.5 top-8 z-20 w-40 rounded-lg bg-white border border-slate-200 shadow-lg py-1 dark:bg-slate-900 dark:border-slate-700"
+                     data-convo-menu-panel="${convoId}">
+                    <button type="button"
+                            class="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition dark:text-rose-400 dark:hover:bg-slate-800"
+                            data-delete-convo="${convoId}">
+                        Delete conversation
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function closeConvoMenus() {
+    if (!chatHistoryEl) return;
+    chatHistoryEl.querySelectorAll('[data-convo-menu-panel]').forEach(panel => {
+        panel.classList.add('hidden');
+    });
+    chatHistoryEl.querySelectorAll('[data-convo-menu]').forEach(btn => {
+        btn.setAttribute('aria-expanded', 'false');
+    });
+}
+
+// Conversation menu & clicks
+if (chatHistoryEl) {
+    chatHistoryEl.addEventListener('click', (event) => {
+        const menuBtn = event.target.closest('[data-convo-menu]');
+        if (menuBtn) {
+            const id = menuBtn.dataset.convoMenu;
+            const panel = chatHistoryEl.querySelector(`[data-convo-menu-panel="${id}"]`);
+            const willOpen = !!panel && panel.classList.contains('hidden');
+            closeConvoMenus();
+            if (willOpen) {
+                panel.classList.remove('hidden');
+                menuBtn.setAttribute('aria-expanded', 'true');
+            }
+            return;
+        }
+
+        const deleteBtn = event.target.closest('[data-delete-convo]');
+        if (deleteBtn) {
+            closeConvoMenus();
+            deleteSingleConversation(deleteBtn.dataset.deleteConvo);
+            return;
+        }
+
+        const openBtn = event.target.closest('.convo-open');
+        if (openBtn) {
+            closeConvoMenus();
+            openConversation(openBtn.dataset.convoId);
+        }
+    });
+}
+
+document.addEventListener('click', (event) => {
+    if (chatHistoryEl && !chatHistoryEl.contains(event.target)) closeConvoMenus();
+});
+
+// Delete single conversation
+async function deleteSingleConversation(convoId) {
+    const confirmed = window.confirm('Delete this conversation?\n\nThis cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch(`/api/conversations/${encodeURIComponent(convoId)}`, { method: 'DELETE' });
+        const data = await res.json();
+
+        if (!res.ok || !data.deleted) {
+            appendMessage('bot', `<strong>Could not delete conversation:</strong> ${data.error || 'Please try again.'}`, true);
+            return;
+        }
+
+        // If currently open conversation was deleted, start fresh
+        if (CONVERSATION_ID === convoId) {
+            startNewChat();
+        }
+
+        const hist = await fetchHistory();
+        if (hist && hist.conversations) renderConversations(hist.conversations);
+        appendMessage('bot', 'Conversation deleted.');
+    } catch (err) {
+        appendMessage('bot', `Failed to delete conversation: ${err.message}`);
+    }
+}
+
+// Clear all conversations
+if (clearChatsBtn) {
+    clearChatsBtn.addEventListener('click', async () => {
+        const confirmed = window.confirm('Delete all your saved conversations?\n\nThis cannot be undone.');
+        if (!confirmed) return;
+
+        clearChatsBtn.disabled = true;
+        try {
+            const res = await fetch('/api/chats', { method: 'DELETE' });
+            const data = await res.json();
+
+            if (!res.ok || !data.deleted) {
+                appendMessage('bot', `<strong>Could not clear chats:</strong> ${data.error || 'Please try again.'}`, true);
+                return;
+            }
+
+            startNewChat();
+            renderConversations([]);
+            appendMessage('bot', `All chat conversations have been cleared (**${data.chats}** messages deleted).`);
+        } catch (err) {
+            appendMessage('bot', `Failed to clear chats: ${err.message}`);
+        } finally {
+            clearChatsBtn.disabled = false;
+        }
+    });
+}
+
+async function openConversation(convoId) {
+    closeSidebar();
+    try {
+        const res = await fetch(`/api/conversations/${encodeURIComponent(convoId)}`);
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+            console.error('Could not load conversation:', data.error);
+            return;
+        }
+
+        CONVERSATION_ID = convoId;
+        localStorage.setItem(CONVERSATION_KEY, convoId);
+        highlightActiveConversation();
+
+        resetFeed();
+        (data.messages || []).forEach(m => {
+            appendMessage(m.role === 'user' ? 'user' : 'bot', m.message);
+        });
+    } catch (err) {
+        console.error('Failed to open conversation:', err);
+    }
 }
 
 function closeScanMenus() {
@@ -985,7 +1223,7 @@ if (clearHistoryBtn) {
 
 async function fetchHistory() {
     try {
-        const res = await fetch('/api/history');
+        const res = await fetch(`/api/history?session_id=${SESSION_ID}`);
         if (!res.ok) return null;
         return await res.json();
     } catch (err) {
@@ -1015,14 +1253,13 @@ async function loadHistory() {
 
     hasSavedChats = !!(data.chats && data.chats.length);
     renderScanHistory(data.scans, hasSavedChats);
+    renderConversations(data.conversations); // <--- ADD THIS LINE!
 
-    // Restore the latest soil so suggestions stay personalized after a reload.
     if (!lastSoilType) {
         const latest = (data.scans || []).find(s => s.identified);
         if (latest) lastSoilType = latest.predicted_soil;
     }
 
-    // Replay the previous conversation so a page refresh does not lose it.
     (data.chats || []).forEach(m => {
         appendMessage(m.role === 'user' ? 'user' : 'bot', m.message);
     });

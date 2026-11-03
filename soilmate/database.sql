@@ -131,6 +131,7 @@ CREATE TABLE IF NOT EXISTS chat_logs (
     id BIGSERIAL PRIMARY KEY,
     user_id INT,
     session_id VARCHAR(64),
+    conversation_id VARCHAR(64),
     role VARCHAR(16) NOT NULL CHECK (role IN ('user', 'bot')),
     message TEXT NOT NULL,
     intent VARCHAR(64),
@@ -142,6 +143,8 @@ CREATE INDEX IF NOT EXISTS idx_chat_logs_session
     ON chat_logs (session_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chat_logs_user
     ON chat_logs (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_logs_conversation
+    ON chat_logs (user_id, conversation_id, created_at DESC);
 
 -- ----------------- USER ACCOUNTS -----------------
 CREATE TABLE IF NOT EXISTS users (

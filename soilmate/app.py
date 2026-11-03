@@ -18,9 +18,13 @@ from history import (
     log_scan,
     recent_scans,
     recent_chats,
+    recent_conversations,
+    conversation_messages,
     get_scan,
     delete_scan,
     delete_user_history,
+    delete_conversation, 
+    delete_all_chats,     
 )
 from quality import assess_image, normalised_entropy, message_for, TIPS
 from soil_catalog import canonical_name, display_name_for, soil_profile
@@ -353,6 +357,7 @@ def chat():
     message = (data.get('message') or '').strip()
     session_id = data.get('session_id')
     known_soil = data.get('soil_type')
+    conversation_id = (data.get('conversation_id') or '').strip()[:64] or None
 
     preferred_language = (data.get('lang') or data.get('language') or '').lower()
     result = bot.respond(
@@ -364,31 +369,31 @@ def chat():
 
     if result.get('action') == 'plant_now':
         language = result.get('language', 'en')
+        target_month = result.get('target_month')
+        target_year = result.get('target_year')
         try:
-            planting_data = plant_now(result.get('soil_type'), language=language)
+            planting_data = plant_now(
+                result.get('soil_type'),
+                language=language,
+                target_month=target_month,
+                target_year=target_year,
+            )
             result['reply'] = format_planting_reply(planting_data, language=language)
             result['planting'] = planting_data
         except Exception:
             if language == 'tl':
-                result['reply'] = (
-                    "Hindi ko maabot ang crop calendar ngayon. "
-                    "Subukan muli sa ilang sandali, o gamitin ang "
-                    "*Ano ang puwedeng itanim ngayong buwan?* na button sa sidebar."
-                )
+                result['reply'] = "Hindi ko maabot ang crop calendar ngayon. Subukan muli sa ilang sandali."
             else:
-                result['reply'] = (
-                    "I couldn't reach the crop calendar just now. "
-                    "Please try again in a moment, or use the "
-                    "*What can I plant this month?* button in the sidebar."
-                )
+                result['reply'] = "I couldn't reach the crop calendar just now. Please try again in a moment."
 
     user_id = current_user_id()
-    if user_id is not None:
-        if message:
-            log_chat(session_id, 'user', message, user_id=user_id)
-        log_chat(session_id, 'bot', result['reply'],
-                 intent=result.get('intent'), confidence=result.get('confidence'),
-                 user_id=user_id)
+    # Log chat history for both authenticated users and guest sessions
+    if message:
+        log_chat(session_id, 'user', message, user_id=user_id,
+                 conversation_id=conversation_id)
+    log_chat(session_id, 'bot', result['reply'],
+             intent=result.get('intent'), confidence=result.get('confidence'),
+             user_id=user_id, conversation_id=conversation_id)
 
     return jsonify(result)
 
@@ -506,13 +511,16 @@ def predict_soil():
 @app.route('/api/history', methods=['GET', 'DELETE'])
 def history_endpoint():
     user_id = current_user_id()
+    session_id = request.args.get('session_id') if request.method == 'GET' else None
+    
     if user_id is None:
-        # Guest sessions are intentionally ephemeral: nothing is saved or shown.
+        # For guest sessions, return chat history based on session_id
         if request.method == 'DELETE':
             return jsonify({'error': 'Please log in to manage saved history.'}), 401
+        
         return jsonify({
-            'scans': [],
-            'chats': [],
+            'scans': recent_scans(session_id=session_id, limit=12) if session_id else [],
+            'chats': recent_chats(session_id=session_id, limit=40) if session_id else [],
             'requires_login': True,
         })
 
@@ -520,12 +528,11 @@ def history_endpoint():
         scan_count, chat_count, filenames = delete_user_history(user_id)
 
         for filename in filenames:
-            # basename() keeps a crafted database value from escaping the folder.
             path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(filename))
             try:
                 os.remove(path)
             except OSError:
-                pass  # already gone, or never stored
+                pass
 
         return jsonify({
             'deleted': True,
@@ -533,11 +540,49 @@ def history_endpoint():
             'chats': chat_count,
         })
 
+    # Logged-in accounts: include 'chats' so app.js can replay previous messages
     return jsonify({
         'scans': recent_scans(user_id=user_id, limit=12),
-        'chats': recent_chats(user_id=user_id, limit=40),
+        'conversations': recent_conversations(user_id=user_id, limit=20),
+        'chats': recent_chats(user_id=user_id, limit=40),  # <--- ADD THIS LINE
         'requires_login': False,
     })
+
+
+@app.route('/api/conversations/<path:conversation_id>', methods=['GET', 'DELETE'])
+def conversation_detail(conversation_id):
+    """Return or delete the messages of one saved conversation."""
+    user_id = current_user_id()
+    if user_id is None:
+        return jsonify({'error': 'Please log in to manage conversations.'}), 401
+
+    conversation_id = (conversation_id or '').strip()[:64]
+
+    if request.method == 'DELETE':
+        deleted_count = delete_conversation(user_id, conversation_id)
+        if not deleted_count:
+            return jsonify({'error': 'Conversation not found.'}), 404
+        return jsonify({'deleted': True, 'conversation_id': conversation_id, 'count': deleted_count})
+
+    messages = conversation_messages(user_id, conversation_id)
+    if not messages:
+        return jsonify({'error': 'Conversation not found.'}), 404
+
+    return jsonify({
+        'conversation_id': conversation_id,
+        'messages': messages,
+    })
+
+
+@app.route('/api/chats', methods=['DELETE'])
+def clear_all_chats():
+    """Clear all chat messages for the current user."""
+    user_id = current_user_id()
+    if user_id is None:
+        return jsonify({'error': 'Please log in first.'}), 401
+
+    count = delete_all_chats(user_id)
+    return jsonify({'deleted': True, 'chats': count})
 
 
 @app.route('/api/scans/<int:scan_id>', methods=['GET', 'DELETE'])

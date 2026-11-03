@@ -9,10 +9,7 @@ cosine similarity, so the bot picks the closest *intent* instead of
 matching hardcoded keywords.
 
 A small keyword bonus helps very short questions ("ph", "compost") and
-per-session state lets follow-up questions resolve pronouns, e.g.:
-
-    User: "What is yellow soil?"        -> intent soil_yellow, last_soil=Yellow
-    User: "How much compost for this?"   -> intent compost_amount, soil=Yellow
+per-session state lets follow-up questions resolve pronouns.
 
 Nothing here calls the network or an external model.
 """
@@ -22,6 +19,7 @@ import math
 import os
 import re
 import unicodedata
+from datetime import datetime, timezone, timedelta
 from difflib import SequenceMatcher
 
 KB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "knowledge_base.json")
@@ -34,7 +32,6 @@ DEFAULT_SUGGESTIONS = [
 ]
 EMPTY_REPLY = "Ask me anything about soil, compost, fertilizers, or what to plant in the Philippines."
 
-# Very common English/Filipino filler words that carry no topic signal.
 STOPWORDS = {
     "a", "an", "the", "is", "are", "am", "was", "were", "be", "been", "being",
     "do", "does", "did", "doing", "have", "has", "had", "having",
@@ -47,7 +44,6 @@ STOPWORDS = {
     "not", "no", "yes", "very", "too", "much", "many", "more", "most",
     "some", "any", "all", "just", "also", "please", "help", "need", "want",
     "give", "get", "make", "tell", "know", "like", "recipe", "cook", "cooking", "dish",
-    # Filipino function words, question words and particles
     "ang", "ng", "mga", "sa", "na", "po", "ba", "ko", "ako", "akin", "mo", "iyo",
     "yung", "yun", "yon", "yong", "ito", "iyan", "iyon", "si", "ni", "kay",
     "para", "lang", "ano", "paano", "papaano", "saan", "kailan", "bakit",
@@ -58,9 +54,6 @@ STOPWORDS = {
     "natin", "ninyo", "niyo", "nila", "niya", "siya", "ka", "oo", "opo",
 }
 
-# Words that are common across many intents and should never win a match by
-# themselves. The Filipino entries keep generic words like "lupa" (soil) from
-# matching every soil intent.
 FILIPINO_MARKERS = {
     "ang", "ng", "mga", "sa", "na", "po", "ba", "ako", "ko", "mo", "siya",
     "niya", "namin", "natin", "ninyo", "niyo", "nila", "ito", "iyan", "iyon",
@@ -78,25 +71,33 @@ FILIPINO_MARKERS = {
     "maputla", "naninilaw", "nalalanta", "tumutubo",
 }
 
-# Words that appear across many intents and therefore must not carry a match
-# on their own ("how do i fix my motorcycle" would otherwise hit "fix acidic
-# soil"). A hit that shares *only* one of these is rejected.
 GENERIC_TERMS = {
     "fix", "improve", "correct", "adjust", "increase", "decrease", "apply", "use",
     "add", "grow", "plant", "need", "make", "get", "know", "want", "help", "cause",
     "stop", "prevent", "avoid", "best", "good", "bad", "work", "happen", "start",
     "begin", "keep", "put", "mix", "control", "kill", "problem", "issue", "way",
     "time", "soil", "thing", "lot", "kind", "type", "level",
-    # Filipino equivalents
     "lupa", "halaman", "gulay", "tanim", "magtanim", "itanim", "gawin",
     "paraan", "paggawa", "uri", "klase", "mapapabuti", "pagbutihin",
     "marami", "kaunti", "sobra", "kulang", "sapat",
 }
 
-
-# Bare colour words are too ambiguous to treat as a soil mention on their own
-# ("leaves turning yellow" is a nutrient problem, not Yellow Soil).
 WEAK_SOIL_WORDS = {"black", "dark", "red", "yellow", "itim", "pula", "dilaw"}
+
+MONTH_MAP = {
+    "january": 1, "jan": 1, "enero": 1,
+    "february": 2, "feb": 2, "pebrero": 2,
+    "march": 3, "mar": 3, "marso": 3,
+    "april": 4, "apr": 4, "abril": 4,
+    "may": 5, "mayo": 5,
+    "june": 6, "jun": 6, "hunyo": 6,
+    "july": 7, "jul": 7, "hulyo": 7,
+    "august": 8, "aug": 8, "agosto": 8,
+    "september": 9, "sep": 9, "sept": 9, "setyembre": 9,
+    "october": 10, "oct": 10, "oktubre": 10,
+    "november": 11, "nov": 11, "nobyembre": 11,
+    "december": 12, "dec": 12, "disyembre": 12,
+}
 
 
 def normalize(text):
@@ -112,21 +113,11 @@ def normalize(text):
 
 
 def detect_language(text):
-    """Return ``"tl"`` when the message uses Filipino function words, else ``"en"``.
-
-    Taglish ("paano mag compost") counts as Filipino because the question
-    words and particles are Filipino. Technical English terms are fine.
-    """
     tokens = normalize(text).split()
     return "tl" if any(tok in FILIPINO_MARKERS for tok in tokens) else "en"
 
 
 def stem(token):
-    """Extremely light suffix stripping.
-
-    It only needs to be *consistent* between the knowledge base and the
-    query, so aggressive linguistic accuracy would be counter-productive.
-    """
     if len(token) > 5 and token.endswith("ing"):
         return token[:-3]
     if len(token) > 4 and token.endswith("ed"):
@@ -137,12 +128,37 @@ def stem(token):
 
 
 def tokenize(text):
-    """Turn raw text into a list of meaningful stemmed tokens."""
     return [
         stem(tok)
         for tok in normalize(text).split()
         if tok and tok not in STOPWORDS and (len(tok) > 1 or tok.isdigit())
     ]
+
+
+def detect_planting_target_month(text):
+    """Detect if the message asks for 'next month', 'this month', or a named month."""
+    norm = normalize(text)
+    now = datetime.now(timezone(timedelta(hours=8)))
+
+    # Next month triggers (English & Filipino)
+    if any(p in norm for p in ["next month", "following month", "susunod na buwan", "sunod na buwan"]):
+        if now.month == 12:
+            return 1, now.year + 1
+        return now.month + 1, now.year
+
+    # This month triggers
+    if any(p in norm for p in ["this month", "current month", "ngayong buwan", "kasalukuyang buwan"]):
+        return now.month, now.year
+
+    # Check for specific month names (e.g. "December", "Enero")
+    tokens = norm.split()
+    for tok in tokens:
+        if tok in MONTH_MAP:
+            target_m = MONTH_MAP[tok]
+            target_y = now.year + 1 if target_m < now.month else now.year
+            return target_m, target_y
+
+    return None, None
 
 
 class ChatBot:
@@ -159,24 +175,16 @@ class ChatBot:
         self.soil_aliases = {name: list(values) for name, values in self.kb.get("soil_aliases", {}).items()}
         self.soil_to_intent = self.kb.get("soil_to_intent", {})
 
-        # Filipino defaults; replaced when knowledge_base_tl.json is present.
         self.fallback_tl = self.fallback_text
         self.fallback_suggestions_tl = list(DEFAULT_SUGGESTIONS)
         self.empty_tl = {"reply": EMPTY_REPLY, "suggestions": list(DEFAULT_SUGGESTIONS)}
 
-        # Session state: session_id -> {"last_intent": str, "last_soil": str}
         self._sessions = {}
 
         self._load_translations()
         self._build_index()
 
     def _load_translations(self):
-        """Merge knowledge_base_tl.json into the English intents, if it exists.
-
-        Keeping the Filipino content in its own file makes the English
-        knowledge base easy to diff and lets a new language be added without
-        touching every intent.
-        """
         if not os.path.exists(TL_KB_PATH):
             return
 
@@ -209,46 +217,36 @@ class ChatBot:
                 if source in data:
                     intent[target] = data[source]
 
-        # Extra Filipino soil names ("pulang lupa", "buhangin", ...).
         for canonical, aliases in tl.get("soil_aliases", {}).items():
             target = self.soil_aliases.setdefault(canonical, [])
             for alias in aliases:
                 if alias not in target:
                     target.append(alias)
 
-    # ------------------------------------------------------------------ index
     def _build_index(self):
-        """Pre-compute TF-IDF vectors for every knowledge-base pattern."""
-        self.documents = []          # list of (intent, token_set, vector)
+        self.documents = []
         self.idf = {}
 
         raw_docs = []
         for intent in self.intents:
-            # Merge English and Filipino phrasings, dropping duplicates.
             patterns = list(dict.fromkeys(intent.get("patterns", []) + intent.get("patterns_tl", [])))
             for pattern in patterns:
                 tokens = tokenize(pattern)
                 if tokens:
                     raw_docs.append((intent, tokens))
-            # The keywords field is searchable metadata, not a document.
 
         total_docs = len(raw_docs) or 1
-
-        # Document frequency
         df = {}
         for _, tokens in raw_docs:
             for tok in set(tokens):
                 df[tok] = df.get(tok, 0) + 1
 
-        # Smoothed IDF
         self.idf = {tok: math.log((total_docs + 1) / (count + 1)) + 1 for tok, count in df.items()}
 
         for intent, tokens in raw_docs:
             vector = self._vectorize(tokens)
             self.documents.append((intent, set(tokens), vector))
 
-        # Pre-tokenize keyword sets for the short-query bonus. Deduplicate so
-        # a word listed in both languages does not earn a double bonus.
         self.intent_keywords = {}
         for intent in self.intents:
             keywords = list(dict.fromkeys(
@@ -257,7 +255,6 @@ class ChatBot:
             self.intent_keywords[intent["id"]] = [tokenize(kw) for kw in keywords]
 
     def _vectorize(self, tokens):
-        """Raw-count TF weighted by IDF, L2-normalized."""
         if not tokens:
             return {}
         tf = {}
@@ -269,19 +266,11 @@ class ChatBot:
 
     @staticmethod
     def _cosine(a, b):
-        # Both vectors are already L2-normalized.
         if len(a) > len(b):
             a, b = b, a
         return sum(weight * b.get(tok, 0.0) for tok, weight in a.items())
 
-    # ------------------------------------------------------------------ soil
     def detect_soil(self, text):
-        """Return the canonical soil name explicitly mentioned in the text.
-
-        Colour words are dangerous: "leaves turning yellow" must not be read
-        as Yellow Soil. A bare colour only counts when the message is just
-        that word, or when it sits directly before "soil"/"lupa".
-        """
         norm_text = normalize(text)
         tokens = norm_text.split()
         if not tokens:
@@ -303,16 +292,10 @@ class ChatBot:
                 else:
                     matched = f" {a} " in padded
                 if matched and (best is None or len(a) > best[1]):
-                    # Longer aliases are more specific ("black soil" > "black").
                     best = (canonical, len(a))
         return best[0] if best else None
 
     def _soil_shortcut(self, tokens, soil):
-        """If the user only named a soil ("yellow", "sandy soil"), pick it.
-
-        Without this, a bare word like "yellow" could match the *yellowing
-        leaves* intent purely on vocabulary overlap.
-        """
         if not soil or not tokens:
             return None
         intent_id = self.soil_to_intent.get(soil)
@@ -325,13 +308,9 @@ class ChatBot:
             return None
         return next((i for i in self.intents if i["id"] == intent_id), None)
 
-    # ---------------------------------------------------------------- scoring
     def rank(self, message, top_n=5):
-        """Return the best-scoring intents as (intent, score, source) tuples."""
         query_tokens = tokenize(message)
         if not query_tokens:
-            # The whole sentence was filler ("what can you do?"). Keep the raw
-            # words so it can still match a knowledge-base phrase.
             query_tokens = [stem(tok) for tok in normalize(message).split() if len(tok) > 1]
         if not query_tokens:
             return []
@@ -344,7 +323,6 @@ class ChatBot:
             shared = query_set & doc_tokens
             if not shared:
                 continue
-            # One shared word is enough only if it is topic-specific.
             if len(shared) == 1 and next(iter(shared)) in GENERIC_TERMS:
                 continue
             score = self._cosine(query_vec, doc_vec)
@@ -354,7 +332,6 @@ class ChatBot:
             if score > scores.get(intent_id, (0.0, ""))[0]:
                 scores[intent_id] = (score, "cosine")
 
-        # Keyword bonus for short, direct questions.
         for intent in self.intents:
             intent_id = intent["id"]
             hits = 0
@@ -367,7 +344,6 @@ class ChatBot:
                 scores[intent_id] = (current[0] + bonus, "keyword")
 
         ranked = sorted(scores.items(), key=lambda kv: kv[1][0], reverse=True)
-
         by_id = {intent["id"]: intent for intent in self.intents}
         results = [(by_id[i], score, source) for i, (score, source) in ranked[:top_n]]
 
@@ -378,12 +354,6 @@ class ChatBot:
         return results
 
     def _fuzzy_match(self, message, min_ratio=0.82):
-        """Character-level fallback for messages made only of filler words.
-
-        Queries like "what can you do" have no indexable tokens at all, so
-        cosine similarity cannot see them. Comparing the raw normalized
-        strings recovers an exact wording match from the knowledge base.
-        """
         target = normalize(message)
         if not target:
             return None
@@ -398,9 +368,7 @@ class ChatBot:
             return None
         return (best[0], best[1], "fuzzy")
 
-    # ------------------------------------------------------------- responders
     def _resolve_answer(self, intent, soil, language="en"):
-        """Pick a soil-specific answer variant in the requested language."""
         if language == "tl":
             by_soil = intent.get("answer_by_soil_tl")
             if by_soil and soil and soil in by_soil:
@@ -409,7 +377,6 @@ class ChatBot:
             if answer:
                 return answer
 
-        # English, or a Filipino answer that has not been translated yet.
         by_soil = intent.get("answer_by_soil")
         if by_soil and soil and soil in by_soil:
             return by_soil[soil]
@@ -423,25 +390,14 @@ class ChatBot:
         return self._sessions.setdefault(session_id, {})
 
     def respond(self, message, session_id=None, known_soil=None, preferred_language=None):
-        """Produce a reply dict for one user message.
-
-        Args:
-            message: raw user text.
-            session_id: stable client-side id, used to remember context.
-            known_soil: last soil detected from an uploaded image, if any.
-            preferred_language: optional UI preference, ``"en"`` or ``"tl"``.
-                A message written in Filipino always gets a Filipino answer;
-                otherwise this preference decides.
-        """
+        """Produce a reply dict for one user message."""
         message = (message or "").strip()
         session = self._session(session_id)
 
-        # A message written in Filipino wins even when the UI is in English.
         language = detect_language(message)
         if language != "tl" and preferred_language in {"en", "tl"}:
             language = preferred_language
 
-        # A soil mentioned in the text always wins over a stale image result.
         soil_in_text = self.detect_soil(message)
         if soil_in_text:
             session["last_soil"] = soil_in_text
@@ -450,22 +406,12 @@ class ChatBot:
         soil = session.get("last_soil")
 
         if not message:
-            if language == "tl":
-                empty = self.empty_tl
-                return {
-                    "reply": empty.get("reply", EMPTY_REPLY),
-                    "intent": "empty",
-                    "confidence": 0.0,
-                    "suggestions": empty.get("suggestions", self.fallback_suggestions_tl),
-                    "soil_type": soil,
-                    "action": None,
-                    "language": language,
-                }
+            empty = self.empty_tl if language == "tl" else {"reply": EMPTY_REPLY, "suggestions": list(DEFAULT_SUGGESTIONS)}
             return {
-                "reply": EMPTY_REPLY,
+                "reply": empty.get("reply", EMPTY_REPLY),
                 "intent": "empty",
                 "confidence": 0.0,
-                "suggestions": list(DEFAULT_SUGGESTIONS),
+                "suggestions": empty.get("suggestions", list(DEFAULT_SUGGESTIONS)),
                 "soil_type": soil,
                 "action": None,
                 "language": language,
@@ -476,35 +422,50 @@ class ChatBot:
 
         shortcut = self._soil_shortcut(set(tokenize(message)), soil_in_text)
         if shortcut is not None:
-            # Keep the real similarity score if that intent was already ranked.
             matched = next((s for i, s, _ in ranked if i["id"] == shortcut["id"]), None)
             best_intent = shortcut
             best_score = matched if matched is not None else max(best_score, 0.9)
 
         if best_intent is None or best_score < self.threshold:
-            if language == "tl":
-                return {
-                    "reply": self.fallback_tl,
-                    "intent": "fallback",
-                    "confidence": round(float(best_score), 3),
-                    "suggestions": list(self.fallback_suggestions_tl),
-                    "soil_type": soil,
-                    "action": None,
-                    "language": language,
-                }
+            fallback = self.fallback_tl if language == "tl" else self.fallback_text
+            suggestions = self.fallback_suggestions_tl if language == "tl" else list(DEFAULT_SUGGESTIONS)
             return {
-                "reply": self.fallback_text,
+                "reply": fallback,
                 "intent": "fallback",
                 "confidence": round(float(best_score), 3),
-                "suggestions": list(DEFAULT_SUGGESTIONS),
+                "suggestions": list(suggestions),
                 "soil_type": soil,
                 "action": None,
                 "language": language,
             }
 
+        # Check if user asked for next month or specific month
+        target_m, target_y = detect_planting_target_month(message)
+        action = best_intent.get("action")
+
+        planting_words = {"plant", "grow", "itanim", "tanim", "pananim", "crops", "gulay", "sow", "harvest", "ani"}
+        if target_m is not None and (action == "plant_now" or any(w in message.lower() for w in planting_words)):
+            action = "plant_now"
+
+        # Dynamic follow-up chips
+        suggestions = best_intent.get("follow_ups_tl" if language == "tl" else "follow_ups", [])
+        if action == "plant_now":
+            now_m = datetime.now(timezone(timedelta(hours=8))).month
+            if target_m == now_m or target_m is None:
+                suggestions = (
+                    ["Ano ang puwedeng itanim sa susunod na buwan?", "Paano ihanda ang lupa?", "Iskedyul ng pagdidilig"]
+                    if language == "tl" else
+                    ["What can I plant next month?", "How do I prepare the soil?", "Watering schedule"]
+                )
+            else:
+                suggestions = (
+                    ["Ano ang puwedeng itanim ngayong buwan?", "Paano gumawa ng compost?", "Ano ang tamang pH?"]
+                    if language == "tl" else
+                    ["What can I plant this month?", "How do I make compost?", "What is the ideal soil pH?"]
+                )
+
         session["last_intent"] = best_intent["id"]
 
-        suggestions = best_intent.get("follow_ups_tl" if language == "tl" else "follow_ups", [])
         return {
             "reply": self._resolve_answer(best_intent, soil, language),
             "intent": best_intent["id"],
@@ -512,6 +473,8 @@ class ChatBot:
             "confidence": round(float(min(best_score, 1.0)), 3),
             "suggestions": suggestions[:3],
             "soil_type": soil,
-            "action": best_intent.get("action"),
+            "action": action,
+            "target_month": target_m,
+            "target_year": target_y,
             "language": language,
         }

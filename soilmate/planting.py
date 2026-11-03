@@ -123,10 +123,16 @@ def crops_for_month(month, soil=None):
         return [dict(row) for row in cur.fetchall()]
 
 
-def plant_now(soil=None, language="en"):
-    """Build the full 'what can I plant now' payload for the current month."""
+def plant_now(soil=None, language="en", target_month=None, target_year=None):
+    """Build the planting payload for a specific month (defaults to current month)."""
     now = ph_now()
-    month = now.month
+    if target_month is not None and 1 <= int(target_month) <= 12:
+        month = int(target_month)
+        year = int(target_year) if target_year else now.year
+    else:
+        month = now.month
+        year = now.year
+
     lang = _language(language)
     month_names = MONTH_NAMES_TL if lang == "tl" else MONTH_NAMES
 
@@ -140,14 +146,13 @@ def plant_now(soil=None, language="en"):
         soil_name = SOIL_NAMES_TL.get(canonical_soil, soil_name)
 
     if not crops and canonical_soil:
-        # Nothing mapped to that soil this month - still be useful.
         crops = crops_for_month(month, None)
         filtered_by_soil = False
         if lang == "tl":
             note = (
                 f"Walang pananim sa database na nakatugma sa {soil_name} para sa "
                 f"{month_names[month - 1]}, kaya narito ang lahat ng pananim na "
-                "bagay ngayong buwan."
+                "bagay sa buwang ito."
             )
         else:
             note = (
@@ -155,10 +160,16 @@ def plant_now(soil=None, language="en"):
                 f"{month_names[month - 1]}, so here are all crops suited to this month."
             )
 
+    is_next = (
+        (year == now.year and month == now.month + 1) or
+        (now.month == 12 and month == 1 and year == now.year + 1)
+    )
+
     return {
         "month": month,
         "month_name": month_names[month - 1],
-        "year": now.year,
+        "year": year,
+        "is_next_month": is_next,
         "season": season_for(month, lang),
         "season_tip": season_tip(month, lang),
         "soil_type": soil_name,
@@ -168,7 +179,6 @@ def plant_now(soil=None, language="en"):
         "count": len(crops),
         "language": lang,
     }
-
 
 def _crop_line(crop, language="en"):
     days = ""
@@ -186,24 +196,27 @@ def format_planting_reply(result, language=None):
     lang = _language(language or result.get("language", "en"))
     month_name = result["month_name"]
     season = result["season"]
+    year = result["year"]
+    is_next = result.get("is_next_month", False)
+
+    time_tag = f"**{month_name} {year}**"
+    if is_next:
+        time_tag += " _(Next Month)_" if lang != "tl" else " _(Susunod na Buwan)_"
 
     if not result["crops"]:
         if lang == "tl":
             return (
-                f"Wala pa akong nakalista na pananim para sa **{month_name}** ({season}).\n\n"
-                "Subukang mag-upload ng larawan ng lupa at sasabihin ko kung anong "
-                "klase ng pananim ang kayang suportahan nito. Mas marami pang "
-                "pananim ang idadagdag sa calendar."
+                f"Wala pa akong nakalista na pananim para sa {time_tag} ({season}).\n\n"
+                "Subukang magtanong ng ibang buwan o mag-upload ng larawan ng lupa."
             )
         return (
-            f"I don't have crops listed for **{month_name}** ({season}) yet.\n\n"
-            "Try uploading a soil photo and I'll at least tell you what your soil "
-            "can support. More crops are being added to the calendar."
+            f"I don't have crops listed for {time_tag} ({season}) yet.\n\n"
+            "Try asking about another month or upload a soil photo."
         )
 
     if lang == "tl":
         lines = [
-            f"Narito ang puwede mong itanim sa **{month_name} {result['year']}** — "
+            f"Narito ang puwede mong itanim para sa {time_tag} — "
             f"{season} sa Pilipinas:\n"
         ]
         if result["soil_type"] and result["filtered_by_soil"]:
@@ -212,17 +225,12 @@ def format_planting_reply(result, language=None):
         if result.get("note"):
             lines.append(f"\n_{result['note']}_")
         lines.append(f"\n**Tip para sa season:** {result['season_tip']}")
-        lines.append(
-            "\nI-click ang *Ano ang puwedeng itanim ngayong buwan?* na chip "
-            "anumang oras para i-refresh ang listahan."
-        )
         return "\n".join(lines)
 
     lines = [
-        f"Here's what you can plant in **{month_name} {result['year']}** — "
+        f"Here's what you can plant for {time_tag} — "
         f"{season} in the Philippines:\n"
     ]
-
     if result["soil_type"] and result["filtered_by_soil"]:
         lines.append(f"Filtered for your **{result['soil_type']}**:\n")
 
@@ -232,5 +240,4 @@ def format_planting_reply(result, language=None):
         lines.append(f"\n_{result['note']}_")
 
     lines.append(f"\n**Season tip:** {result['season_tip']}")
-    lines.append("\nClick the *What can I plant this month?* chip any time to refresh this list.")
     return "\n".join(lines)

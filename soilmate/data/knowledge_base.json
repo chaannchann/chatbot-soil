@@ -309,11 +309,17 @@
         "what can i plant this month", "what can i plant now", "what should i plant now",
         "what to plant this month", "what can i plant right now", "planting now",
         "what crops can i plant now", "what can i plant today", "suggest crops for this month",
-        "what should i plant this season", "what can i grow now", "current planting season"
+        "what should i plant this season", "what can i grow now", "current planting season",
+        "what can i plant next month", "what to plant next month", "what should i plant next month",
+        "planting next month", "crops for next month", "what can i grow next month",
+        "what can i plant in december", "what can i plant in january", "what can i plant in february",
+        "what can i plant in march", "what can i plant in april", "what can i plant in may",
+        "what can i plant in june", "what can i plant in july", "what can i plant in august",
+        "what can i plant in september", "what can i plant in october", "what can i plant in november"
       ],
-      "keywords": ["plant", "planting", "now", "this month", "sow"],
+      "keywords": ["plant", "planting", "now", "this month", "next month", "sow"],
       "action": "plant_now",
-      "answer": "Let me check what suits the current month in the Philippines..."
+      "answer": "Let me check what suits the month in the Philippines..."
     },
     {
       "id": "germination",
