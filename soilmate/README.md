@@ -21,6 +21,7 @@ Everything runs on the machine. No external AI, weather, or geocoding APIs are u
 - Prediction safety: results below 0.75 confidence or above 0.92 entropy are rejected instead of guessed.
 - Photo validation: images are checked for size, brightness, contrast, and how much of the frame looks like soil before prediction.
 - Chatbot: retrieval-based. Text is normalized, tokenized, and lightly stemmed; TF-IDF vectors are compared with cosine similarity. A small keyword bonus helps short questions, and a 0.16 threshold triggers a fallback when nothing matches.
+- Bilingual retrieval: Filipino phrasings live in `data/knowledge_base_tl.json` and are indexed together with the English ones. Filipino function words ("paano", "bakit", "ang", "mga") are detected to choose the reply language, so Taglish questions get Filipino answers. No translation API is used.
 - Conversation context: the last soil type is remembered per session so follow-up questions work.
 - Planting calendar: the current month is computed in Philippine time (UTC+8), and crops are selected from the `crop_planting_months` table. Results can be filtered by soil type.
 - Accounts: passwords are hashed with bcrypt; login sessions use Flask's signed cookie. Guest sessions are ephemeral: scans and chats are not saved or shown in history until the user logs in.
@@ -29,13 +30,15 @@ Everything runs on the machine. No external AI, weather, or geocoding APIs are u
 
 - Full-screen login and registration panel, with a "Continue as guest" option
 - Soil photo upload and analysis
-- Camera/photo button beside the chat input for quick soil scans
+- Camera/photo button beside the chat input for quick soil scans: opens a live webcam preview on desktop (capture, or upload instead) and the native camera sheet on phones and tablets
 - Chat for soil, compost, fertilizer, pest, and crop questions
+- English and Filipino (Tagalog) chat, including Taglish; use the header **EN/TL** button to switch the suggested questions and calendar labels, or just type in Filipino and the bot replies in Filipino
 - "What can I plant this month?" crop calendar
 - Recent scans and chat history restore for signed-in users
 - "Clear" action deletes all saved scans, chats, and uploaded scan photos for the account
 - 3-dot menu on each history row to delete a single scan
 - Guest mode with a login prompt to start saving history
+- Edit profile from the header avatar: change username, email, and a custom avatar photo (center-cropped to 256x256) or remove it
 - Formatted chat replies and collapsible crop lists for long results
 - Responsive layout with a mobile sidebar drawer
 - Light and dark theme toggle that remembers the choice and follows the system preference by default
@@ -114,6 +117,27 @@ Straight up questions:
 32. Why are my ampalaya leaves turning yellow?
 33. Why are my leaves turning yellow?
 
+ Filipino (Tagalog) Support
+
+Click the **EN/TL** button in the header to switch the suggested questions, welcome message, chat input placeholder, and planting-calendar labels. You can also type in Filipino or Taglish at any time — the bot detects Filipino question words and answers in Filipino even when the interface is in English.
+
+Sample Filipino questions:
+
+- Kumusta?
+- Ano ang tamang pH ng lupa para sa gulay?
+- Paano ko susuriin ang pH ng lupa?
+- Paano gumawa ng compost?
+- Gaano karaming compost ang ihahalo ko sa lupa?
+- Ano ang pinakamagandang organic fertilizer?
+- Bakit naninilaw ang dahon ng ampalaya ko?
+- Paano ko mapapabuti ang pulang lupa?
+- Gaano kadalas akong magdidilig?
+- Ano ang puwedeng itanim ngayong buwan?
+- Paano ko kokontrolin ang peste nang organic?
+- Paano protektahan ang halaman sa bagyo?
+
+ Filipino content lives in `data/knowledge_base_tl.json`; it is merged with the English intents when the app starts.
+
  Database
 
 Seven tables:
@@ -126,7 +150,7 @@ Seven tables:
 | `crop_planting_months` | Which months suit each crop |
 | `scans` | Uploaded photo results |
 | `chat_logs` | Chat messages and matched intents |
-| `users` | Account details and password hashes |
+| `users` | Account details, avatar, and password hashes |
 
  Project Structure
 

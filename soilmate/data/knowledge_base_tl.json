@@ -1,0 +1,526 @@
+{
+  "version": 1,
+  "name": "SoilMate Filipino (Tagalog) Knowledge Base",
+  "fallback": "Hindi ko pa siguradong maintindihan ang tanong na iyon. Pinakamalakas ako sa **kalusugan ng lupa, composting, pataba, pagdidilig, peste, at tamang panahon ng pagtatanim sa Pilipinas**.\n\nPuwede mo bang ulitin sa ibang salita, o subukan ang isa sa mga ito:\n- *Ano ang tamang pH ng lupa para sa gulay?*\n- *Paano gumawa ng compost?*\n- *Bakit naninilaw ang dahon ng ampalaya ko?*\n\nPuwede ka rin mag-upload ng larawan ng lupa mula sa sidebar at susuriin ko ito.",
+  "fallback_suggestions": [
+    "Ano ang puwedeng itanim ngayong buwan?",
+    "Paano ko susuriin ang pH ng lupa?",
+    "Paano gumawa ng compost?"
+  ],
+  "empty": {
+    "reply": "Magtanong lang tungkol sa lupa, compost, pataba, o kung ano ang puwedeng itanim sa Pilipinas.",
+    "suggestions": [
+      "Ano ang puwedeng itanim ngayong buwan?",
+      "Paano ko susuriin ang pH ng lupa?",
+      "Paano gumawa ng compost?"
+    ]
+  },
+  "soil_aliases": {
+    "Black Soil": [
+      "itim na lupa", "lupang itim", "madilim na lupa", "itim"
+    ],
+    "Red Soil": [
+      "pulang lupa", "lupang pula", "lupang malagkit", "malagkit na lupa", "pula"
+    ],
+    "Yellow Soil": [
+      "dilaw na lupa", "lupang dilaw", "buhanging lupa", "lupang buhangin", "buhangin", "dilaw"
+    ]
+  },
+  "intents": {
+    "greeting": {
+      "title": "Pagbati",
+      "patterns": [
+        "kumusta", "kamusta", "mabuhay", "magandang umaga", "magandang tanghali",
+        "magandang hapon", "magandang gabi", "hello po", "hi po", "musta",
+        "musta na", "kamusta ka", "kumusta ka", "ano na"
+      ],
+      "keywords": ["kumusta", "kamusta", "mabuhay", "magandang umaga"],
+      "answer": "Mabuhay! Ako si **SoilMate**, ang iyong katulong sa lupa at pananim sa Pilipinas.\n\nMagtanong tungkol sa pH ng lupa, paggawa ng compost, organic fertilizer, pagdidilig, peste, o kung ano ang magandang itanim ngayong buwan. Puwede ka rin mag-upload ng larawan ng iyong lupa mula sa sidebar at tutukuyin ko ang uri nito at magrerekomenda ng mga pananim.",
+      "follow_ups": [
+        "Ano ang puwedeng itanim ngayong buwan?",
+        "Paano ko susuriin ang pH ng lupa?",
+        "Paano gumawa ng compost?"
+      ]
+    },
+    "help": {
+      "title": "Mga Kakayahan",
+      "patterns": [
+        "ano ang kaya mong gawin", "paano ka gumagana", "ano ang puwede kong itanong",
+        "ano ang alam mo", "tulungan mo ako", "mga feature mo", "ano ang mga opsyon",
+        "mga command", "gabayan mo ako", "tulong", "tulong po", "kailangan ko ng tulong"
+      ],
+      "keywords": ["tulong", "kaya", "opsyon"],
+      "answer": "Narito ang mga maitutulong ko:\n\n- **pH ng lupa** — tamang range, paano susuriin, paano aayusin\n- **Composting** — paano gumawa, gaano karami ang ihalo\n- **Organic fertilizer** — vermicast, dumi ng manok, carbonized rice hull\n- **Problema sa dahon** — paninilaw, batik, pagkalanta\n- **Pagdidilig at drainage** — iskedyul, paano ayusin ang tubig na naiipon\n- **Pest control** — organic na solusyon sa mga karaniwang peste sa Pilipinas\n- **Tamang panahon ng pagtatanim** — tag-ulan at tag-araw, pinakamagandang buwan\n- **Pagsusuri ng lupa** — mag-upload ng larawan mula sa sidebar\n\nKung tungkol ito sa pagtatanim ng pagkain sa Pilipinas, magtanong lang.",
+      "follow_ups": [
+        "Ano ang puwedeng itanim ngayong buwan?",
+        "Gaano karaming compost ang ihahalo ko?",
+        "Gaano kadalas akong magdidilig?"
+      ]
+    },
+    "thanks": {
+      "title": "Pasasalamat",
+      "patterns": [
+        "salamat", "maraming salamat", "salamat po", "salamat ng marami",
+        "thank you po", "malaking tulong", "nakatulong", "okay na", "ayos na",
+        "salamat sa tulong", "salamat sa lahat", "salamat sa lahat ng tulong"
+      ],
+      "keywords": ["salamat"],
+      "answer": "Walang anuman! Masaya akong makatulong.\n\nKung gusto mo, mag-upload ng larawan ng iyong lupa at titingnan ko kung anong mga pananim ang pinakaangkop dito.",
+      "follow_ups": [
+        "Ano ang puwedeng itanim ngayong buwan?",
+        "Paano ko mapapabuti ang aking lupa?"
+      ]
+    },
+    "soil_ph_basics": {
+      "title": "Mga Batayan ng pH ng Lupa",
+      "patterns": [
+        "ano ang ph ng lupa", "ano ang ph", "tamang ph ng lupa", "ph para sa gulay",
+        "ph range ng mga pananim", "ph level ng halaman", "gaano kahalaga ang ph",
+        "ano ang ibig sabihin ng ph", "acidic na lupa", "alkaline na lupa",
+        "neutral na lupa", "maasim ba ang lupa ko", "ph ng lupa ko"
+      ],
+      "keywords": ["ph", "asido", "acidic", "alkaline", "neutral"],
+      "answer": "Ang **pH ng lupa** ay nagsasabi kung gaano ka-asido o ka-alkaline ang lupa, sa scale na 0 hanggang 14:\n- **Mas mababa sa 7** = acidic\n- **7** = neutral\n- **Mas mataas sa 7** = alkaline\n\nKaramihan ng gulay sa Pilipinas ay pinakamaganda ang tubo sa **pH 6.0 hanggang 7.0** (medyo acidic hanggang neutral). Sa range na iyon, nananatiling *available* sa ugat ang nutrients tulad ng nitrogen, phosphorus, at potassium.\n\nKapag masyadong malayo ang pH, nakukulong ang nutrients sa lupa kahit magpataba ka — hindi ito kayang sipsipin ng halaman.",
+      "follow_ups": [
+        "Paano ko susuriin ang pH ng lupa?",
+        "Paano ko aayusin ang acidic na lupa?",
+        "Ano ang pH ng pulang lupa?"
+      ]
+    },
+    "soil_ph_testing": {
+      "title": "Pagsusuri ng pH ng Lupa",
+      "patterns": [
+        "paano ko susuriin ang ph ng lupa", "paano mag test ng ph", "pagsusuri ng ph ng lupa",
+        "ph test", "paano malalaman ang ph ng lupa", "sukatin ang ph ng lupa",
+        "ph meter", "litmus test", "soil testing", "saan magpapa-test ng lupa",
+        "paano mag test ng ph without kit", "diy ph test"
+      ],
+      "keywords": ["test", "suri", "metro", "litmus", "kit"],
+      "answer": "Puwede mong suriin ang pH nang hindi malaki ang gastos:\n\n1. **DIY suka at baking soda test** (libre, rough estimate lang)\n- Maglagay ng 2 kutsarang tuyong lupa sa tasa.\n- Magdagdag ng **suka** — kung bumula, **alkaline** ang lupa mo.\n- Kung walang nangyari, maglagay ng **baking soda at tubig** sa pangalawang sample — kung bumula, **acidic** ang lupa.\n- Kung parehong walang bula, malamang malapit ito sa **neutral**.\n\n2. **Universal pH indicator strips** (mura, mabibili sa garden supply shops)\n- Haluan ang lupa ng distilled water sa 1:1 ratio, haluin, hintaying lumubog, at isawsaw ang strip sa malinaw na likido.\n\n3. **Digital pH meter** (₱300–₱1,500)\n- Pinakamabilis at pinakatumpak kung madalas kang mag-test. Ipasok ang probe sa basang lupa.\n\nPara sa mas seryosong pagsasaka, ang **soil lab test** sa Municipal Agriculture Office (MAO) ninyo ay kadalasang libre o napakamura.",
+      "follow_ups": [
+        "Paano ko aayusin ang acidic na lupa?",
+        "Ano ang tamang pH para sa pechay?",
+        "Paano gumawa ng compost?"
+      ]
+    },
+    "soil_ph_adjust": {
+      "title": "Pag-aayos ng pH ng Lupa",
+      "patterns": [
+        "paano aayusin ang acidic na lupa", "pababain ang ph ng lupa",
+        "pataasin ang ph ng lupa", "dagdagan ang ph", "bawasan ang ph",
+        "gawing hindi acidic ang lupa", "gawing mas acidic ang lupa",
+        "sobrang acidic ang lupa", "sobrang alkaline ang lupa", "patamisin ang lupa",
+        "maglagay ng lime", "agricultural lime", "abo ng kahoy", "sulfur para sa lupa",
+        "ayusin ang ph ng lupa", "paano taasan ang ph", "paano babaan ang ph",
+        "taasan ang ph", "babaan ang ph", "taasan ang ph ng lupa", "babaan ang ph ng lupa"
+      ],
+      "keywords": ["lime", "sulfur", "ayos", "taas", "baba", "adjust"],
+      "answer": "**Para pataasin ang pH (gawing hindi gaano ka-asido):**\n- **Agricultural lime (calcium carbonate)** — ito ang standard na solusyon. Mga **1–2 kg bawat 10 sq m** para sa 1-point na pagtaas, ihalo sa ibabaw na 15 cm ng lupa.\n- **Abo ng kahoy** — magaan lang ang ihagis, gamitin nang kaunti dahil nagdadagdag din ito ng potassium.\n- **Compost o vermicast** — dahan-dahang inaayos ang pH pabalik sa neutral habang nagdadagdag ng nutrients.\n- Bigyan ito ng **2–4 linggo** bago magtanim.\n\n**Para pababain ang pH (gawing mas acidic):**\n- **Elemental sulfur** — mabagal pero epektibo, mga 200 g bawat 10 sq m.\n- **Pine needles, coffee grounds, o hinog na dumi ng hayop** — banayad at unti-unti ang epekto.\n- **Carbonized rice hull (CRH)** — nakakatulong sa paglipas ng panahon.\n\nLaging mag-amend **bago** magtanim, at mag-test muli pagkalipas ng ilang linggo. Para sa pulang laterite soil (madalas pH 5.0–6.0), lime ang unang hakbang.",
+      "follow_ups": [
+        "Paano ko susuriin ang pH ng lupa?",
+        "Ano ang pH ng pulang lupa?",
+        "Paano ko mapapabuti ang pulang lupa?"
+      ]
+    },
+    "compost_making": {
+      "title": "Paggawa ng Compost",
+      "patterns": [
+        "paano gumawa ng compost", "paano mag compost", "paggawa ng compost",
+        "gumawa ng compost", "composting sa bahay", "paano magsimula ng composting",
+        "compost pile", "recipe ng compost", "organic compost", "paano mag-compost",
+        "bokashi", "gaano katagal ang compost", "sangkap ng compost"
+      ],
+      "keywords": ["compost", "composting", "pile"],
+      "answer": "Madali ang composting kapag tama ang **ratio ng browns at greens**:\n\n**Ang halo (mga 2:1 o 3:1 ayon sa volume)**\n- **Browns (carbon):** tuyong dahon, dayami ng palay, ginutay na karton, sawdust, balat ng niyog\n- **Greens (nitrogen):** tira ng pagkain (walang karne/langis), ginupit na damo, coffee grounds, dumi ng hayop\n\n**Mga hakbang**\n1. Gumawa ng pile o gumamit ng bin/drum, hindi bababa sa **1 cubic meter** para mapanatili ang init.\n2. Paghaliliin ang browns at greens sa **manipis na layer**.\n3. Panatilihing **basa pero hindi lumulubog** — tulad ng pinigang espongha.\n4. **Haluin every 1–2 weeks** para makapasok ang oxygen.\n5. Handa na sa **4–8 linggo** dahil sa init sa Pilipinas. Tapos na ito kapag maitim, malambot, at amoy lupa (hindi maasim).\n\nIwasan ang karne, mamantikang pagkain, at may sakit na halaman. Kung mabaho, kailangan mo ng mas maraming browns o mas madalas na paghahalo.",
+      "follow_ups": [
+        "Gaano karaming compost ang ihahalo ko sa lupa?",
+        "Paano gumawa ng organic fertilizer?",
+        "Paano ko mapapabuti ang dilaw na lupa?"
+      ]
+    },
+    "compost_amount": {
+      "title": "Gaano Karaming Compost ang Ihahalo",
+      "patterns": [
+        "gaano karaming compost ang ihahalo ko sa lupa", "gaano karaming compost",
+        "dami ng compost", "gaano karaming compost ang idadagdag",
+        "gaano karaming compost bawat metro kuwadrado", "ratio ng compost",
+        "gaano karaming compost para sa hardin", "gaano karaming compost ang ihahalo",
+        "compost sa paso", "application rate ng compost"
+      ],
+      "keywords": ["gaano karaming compost", "dami ng compost", "ratio", "rate"],
+      "answer_by_soil": {
+        "Black Soil": "Ang **itim na lupa** mo ay mayaman na sa organic matter, kaya hindi mo kailangan ng marami — sapat na ang **manipis na 1–2 cm na top-dress** ng compost isang beses kada season para mapanatili ang fertility.\n\nHaluin ito nang bahagya sa ibabaw na **5 cm** lang. Ang sobrang pag-amend sa itim na lupa ay puwedeng gawing waterlogged at masakal ang paglaki ng ugat.",
+        "Red Soil": "Ang **pulang lupa** ay kadalasang mabigat na clay at madalas acidic, kaya kailangan nito ng katamtamang amendment:\n\n- Ihalo ang **3–5 kg compost bawat metro kuwadrado**, sa ibabaw na **15–20 cm**.\n- Magdagdag ng **carbonized rice hull (CRH)** sa halos 1 bahagi CRH sa 3 bahagi compost — binubuksan nito ang clay at pinapabuti ang drainage.\n- Ulitin **bawat planting season**.\n- Dahil acidic ang pulang lupa, samahan ang compost ng magaan na **agricultural lime**.",
+        "Yellow Soil": "Ang **dilaw (buhangin) na lupa** ay napakabilis mag-drain at mabilis matangay ang nutrients, kaya ito ang pinakanangangailangan ng tulong:\n\n- Ihalo ang **5–8 kg compost bawat metro kuwadrado**, malalim sa ibabaw na **20–30 cm**.\n- Magdagdag ng **vermicast o hinog na dumi ng manok** sa 1–2 kg bawat sq m para sa nutrients.\n- Dahil kakaunti ang nahihila ng buhangin, maglagay ng compost **bawat season** — at lagyan ng makapal na mulch para bumagal ang pag-alis ng tubig.\n- Para sa **mga halaman sa paso**, gumamit ng mga **1 bahagi compost sa 2 bahagi lupa**."
+      },
+      "answer": "Bilang pangkalahatang tuntunin, ihalo ang **3–5 kg na ganap na bulok na compost bawat metro kuwadrado** sa ibabaw na 15–20 cm ng lupa.\n\nMas tumpak akong makakasagot kung sasabihin mo ang uri ng lupa mo:\n- **Itim na lupa** → light maintenance lang (1–2 cm top-dress)\n- **Pulang lupa** → 3–5 kg bawat sq m, dagdagan ng carbonized rice hull\n- **Dilaw/buhanging lupa** → 5–8 kg bawat sq m, ulitin bawat season",
+      "follow_ups": [
+        "Paano gumawa ng compost?",
+        "Paano ko mapapabuti ang dilaw na lupa?",
+        "Ano ang pH ng aking lupa?"
+      ]
+    },
+    "fertilizer_organic": {
+      "title": "Mga Organic Fertilizer",
+      "patterns": [
+        "ano ang pinakamagandang organic fertilizer", "organic fertilizer para sa buhangin na lupa",
+        "pinakamagandang organic fertilizer sa pilipinas", "organic fertilizer",
+        "natural fertilizer", "anong pataba ang gagamitin ko", "pataba para sa gulay",
+        "vermicast", "vermicompost", "dumi ng manok", "carbonized rice hull", "crh",
+        "pataba mula sa dumi", "compost tea", "liquid fertilizer", "rekomendasyon ng pataba",
+        "ano ang abono", "ano ang pataba", "abono para sa gulay", "anong abono ang gagamitin"
+      ],
+      "keywords": ["pataba", "abono", "organic", "vermicast", "dumi", "vermicompost", "crh", "rice hull"],
+      "answer": "Para sa mga hardin sa Pilipinas, ito ang pinakamalakas na **lokal at organic** na opsyon:\n\n- **Vermicast (dumi ng bulate)** — pinakakumpleto. Banayad, hindi nasusunog ang halaman, at napakahusay para sa punla at paso. Maghalo ng 1–2 tasa bawat halaman.\n- **Hinog na dumi ng manok** — mataas sa nitrogen, maganda sa mga dahon-gulay. Dapat **3–6 buwang hinog**; ang sariwang dumi ay nakakapaso ng ugat at may dalang sakit.\n- **Carbonized rice hull (CRH)** — hindi ito pataba mismo, pero **nagluluwag ng clay, nagpapahangin sa lupa, at nag-iimbak ng tubig at nutrients**. Napakahusay para sa pula at dilaw na lupa.\n- **Compost** — ang pundasyon. Nagpapabuti ng istruktura ng lupa at buhay-microbe.\n- **Compost tea / fish emulsion** — mabilis na liquid boost para sa naninilaw na dahon.\n\n**Para sa buhangin/dilaw na lupa:** pagsamahin ang CRH + vermicast + compost, at maglagay ng **kaunti-kaunti pero mas madalas**, dahil mabilis tumagas ang nutrients sa buhangin.\n\nIwasan ang sariwang dumi, at huwag magsobra sa nitrogen — puro dahon ang tutubo at wala kang bunga.",
+      "follow_ups": [
+        "Gaano karaming compost ang ihahalo ko?",
+        "Paano ko mapapabuti ang dilaw na lupa?",
+        "Gaano kadalas akong magpapataba?"
+      ]
+    },
+    "fertilizer_application": {
+      "title": "Tamang Panahon ng Pagpapataba",
+      "patterns": [
+        "gaano kadalas magpataba", "kailan magpapataba", "iskedyul ng pataba",
+        "paano maglagay ng pataba", "side dressing", "pagpapataba ng gulay",
+        "gaano karaming pataba", "kailan maglalagay ng compost",
+        "tamang panahon ng pagpapataba", "paano magpataba ng pechay",
+        "paano magpataba ng kamatis", "paano magpataba ng gulay",
+        "paano magpataba ng halaman", "kailan magpataba ng gulay"
+      ],
+      "keywords": ["pataba", "iskedyul", "panahon", "kailan", "madalas", "magpataba", "magpapataba"],
+      "answer": "Simpleng organic feeding rhythm:\n\n**Bago magtanim (basal)**\n- Ihalo ang compost at vermicast sa butas o bed ng taniman.\n\n**3–4 linggo pagkatapos ng transplant (side-dress)**\n- Maglagay ng isang maliit na dakot ng vermicast o hinog na dumi ng manok sa paligid ng bawat halaman, mga isang dangkal mula sa tangkay. Diligan pagkatapos.\n\n**Bawat 3–4 linggo habang tumutubo**\n- Ulitin ang side-dressing.\n\n**Sa panahon ng pamumulaklak at pamumunga**\n- Lumipat sa mga input na **mayaman sa potassium** — abo ng kahoy o banana peel tea — para suportahan ang bunga imbes na puro dahon.\n\nLaging magpataba sa **basang lupa**, hindi tuyong-tuyo, at diligan pagkatapos. Ang pagpapataba sa tuyong ugat ay nakakapaso.",
+      "follow_ups": [
+        "Ano ang pinakamagandang organic fertilizer?",
+        "Gaano kadalas akong magdidilig?",
+        "Bakit naninilaw ang mga dahon ko?"
+      ]
+    },
+    "yellow_leaves": {
+      "title": "Paninilaw ng Dahon",
+      "patterns": [
+        "bakit naninilaw ang mga dahon ko", "naninilaw ang dahon", "dilaw na dahon",
+        "nagiging dilaw ang dahon", "dilaw ang dahon ng halaman", "bakit dilaw ang halaman ko",
+        "chlorosis", "maputla ang dahon", "nawawalan ng kulay ang dahon",
+        "dilaw ang lumang dahon", "dilaw ang bagong dahon", "maputla ang halaman"
+      ],
+      "keywords": ["dilaw", "paninilaw", "maputla", "chlorosis"],
+      "answer": "Ang paninilaw ng dahon ay kadalasang isa sa apat na dahilan — suriin sa ganitong pagkakasunod-sunod:\n\n1. **Kulang sa nitrogen** — *luma/ibabang* dahon ang unang naninilaw, nagsisimula sa dulo. Solusyon: side-dress ng vermicast o hinog na dumi ng manok.\n2. **Sobra sa tubig / mahinang drainage** — naninilaw *at* lumalanta ang dahon, basang-basa ang lupa, nabubulok ang ugat. Solusyon: itigil ang pagdidilig, pagbutihin ang drainage gamit ang CRH, tingnan kung may waterlogged na bed. Napakakaraniwan nito sa tag-ulan.\n3. **Nutrient lockout dahil sa pH** — kapag labas sa 6.0–7.0 ang pH, hindi available ang nutrients kahit magpataba ka. Solusyon: i-test ang pH, maglagay ng lime kung acidic.\n4. **Kulang sa magnesium o iron** — dilaw *sa pagitan* ng ugat ng dahon sa bagong tubo. Solusyon: mag-spray ng magaan na Epsom salt solution (1 kutsara bawat 4 L tubig).\n\n**Mabilis na test:** kung ibabang dahon ang unang naninilaw → nitrogen. Kung lantang-lanta at dilaw ang buong halaman → sobra sa tubig. Kung dilaw sa pagitan ng berdeng ugat → micronutrient.",
+      "follow_ups": [
+        "Gaano kadalas akong magdidilig?",
+        "Paano ko susuriin ang pH ng lupa?",
+        "Ano ang pinakamagandang organic fertilizer?"
+      ]
+    },
+    "ampalaya_care": {
+      "title": "Pag-aalaga ng Ampalaya",
+      "patterns": [
+        "bakit naninilaw ang dahon ng ampalaya ko", "naninilaw ang dahon ng ampalaya",
+        "ampalaya", "bitter gourd", "bitter melon", "paano magtanim ng ampalaya",
+        "pag-aalaga ng ampalaya", "paano palakihin ang ampalaya", "dilaw ang ampalaya",
+        "hindi namumunga ang ampalaya", "trellis ng ampalaya"
+      ],
+      "keywords": ["ampalaya", "bitter gourd", "bitter melon"],
+      "answer": "Ang **ampalaya (bitter gourd)** ay matakaw sa nutrients at malakas gumapang. Narito ang kailangan nito:\n\n**Lugar at suporta**\n- Buong araw na sikat ng araw, hindi bababa sa **6 oras**.\n- Bigyan ito ng **trellis na 2 m ang taas** — hindi ito mabubungang mabuti kung nakahiga lang sa lupa.\n\n**Lupa**\n- Pinakamaganda sa **pH 6.0–6.7**, may magandang drainage. Puwede ang itim o dilaw na lupa; ang pulang clay ay kailangan ng CRH.\n- Mayaman sa organic matter — ihalo ang compost at vermicast bago magtanim.\n\n**Kung naninilaw ang dahon:**\n- **Gutom sa nitrogen** ang ampalaya — ito ang pinakakaraniwang dahilan. Mag-side-dress ng vermicast o hinog na dumi ng manok.\n- Tingnan din ang **waterlogging** — ayaw ng ampalaya ang basang-basang ugat, at puwede itong malunod sa malakas na ulan. Itaas ang bed kung kailangan.\n- Bantayan ang **aphids at fruit fly**, na nagpapahina sa halaman at nagdudulot ng paninilaw.\n\n**Timing:** sumisibol sa 5–10 araw, anihan sa **60–80 araw**. Pinakamagandang itanim **Oktubre–Pebrero**.",
+      "follow_ups": [
+        "Ano ang pinakamagandang organic fertilizer?",
+        "Paano ako magkokontrol ng peste nang organic?",
+        "Ano ang puwedeng itanim ngayong buwan?"
+      ]
+    },
+    "crop_specific_care": {
+      "title": "Pag-aalaga sa Partikular na Pananim",
+      "patterns": [
+        "paano magtanim ng pechay", "paano magtanim ng talong", "paano magtanim ng sitaw",
+        "paano magtanim ng kamote", "paano magtanim ng kamoteng kahoy",
+        "paano magtanim ng kamatis", "paano magtanim ng okra", "paano magtanim ng sili",
+        "paano magtanim ng kangkong", "paano magtanim ng munggo", "paano magtanim ng mais",
+        "pag-aalaga ng gulay sa pilipinas", "paano magtanim ng kalabasa",
+        "paano magtanim ng pipino", "paano magtanim ng pakwan", "paano magtanim ng upo",
+        "paano magtanim ng patola", "paano magtanim ng sayote", "paano magtanim ng mustasa",
+        "paano magtanim ng litsugas", "paano magtanim ng repolyo", "paano magtanim ng karot",
+        "paano magtanim ng labanos", "paano magtanim ng sibuyas", "paano magtanim ng bawang",
+        "paano magtanim ng luya", "paano magtanim ng gabi", "paano magtanim ng ube",
+        "paano magtanim ng palay", "paano magtanim ng malunggay", "paano magtanim ng alugbati",
+        "paano magtanim ng mani", "paano magtanim ng balanoy", "paano magtanim ng tanglad"
+      ],
+      "keywords": ["gulay", "pananim", "pag-aalaga"],
+      "answer": "Narito ang mabilis na gabay para sa mga karaniwang pananim sa Pilipinas:\n\n- **Pechay (Bok Choy)** — pinakamabilis at pinakamadali. pH 5.5–7.0, anihan **30–45 araw**. Mahilig sa nitrogen, kaya compost + vermicast. Itanim Nob–Peb para sa pinakamagandang resulta, pero tumutubo rin buong taon.\n- **Talong (Eggplant)** — pH 5.5–6.8, sumisibol 7–14 araw, anihan **80–100 araw**. Buong araw na sikat ng araw, suportahan ang halaman. Bantayan ang fruit fly at aphids.\n- **Sitaw (String Beans)** — isang **legume**, kaya *kusa nitong naaayos ang nitrogen* — huwag magsobra sa nitrogen fertilizer o puro dahon lang ang tutubo at walang pod. pH 5.5–6.5, anihan **50–65 araw**.\n- **Kamatis (Tomato)** — pH 6.0–6.8, anihan 60–90 araw. Kailangan ng suporta at tuloy-tuloy na halumigmig para maiwasan ang blossom-end rot.\n- **Kamote (Sweet Potato)** — pH 5.5–6.5, anihan **90–120 araw**. Napakapagpasensya; tumutubo sa mahirap na lupa. Itanim sa dulo ng tag-ulan.\n- **Kamoteng Kahoy (Cassava)** — pH 5.0–6.5, anihan **240–300 araw**. Sobrang matibay sa tagtuyot; simulan sa umpisa ng tag-ulan (Mayo–Hulyo).\n- **Kangkong (Water Spinach)** — tumutubo sa basang o kahit waterlogged na lupa — perpekto sa mga problemang lugar. Anihan sa loob ng 21–30 araw.\n- **Pipino (Cucumber)** — pH 6.0–7.0, anihan 50–65 araw. Bigyan ng trellis at tuloy-tuloy na pagdidilig.\n- **Kalabasa (Squash)** — pH 6.0–6.8, anihan 90–120 araw. Bigyan ang mga baging ng sapat na espasyo.\n- **Mais (Corn)** — pH 5.8–7.0, anihan 90–120 araw. Itanim nang bloke, hindi isang hilera lang, para sa magandang pollination.\n- **Malunggay (Moringa)** — matibay sa tagtuyot; ready ang dahon sa 60–90 araw at patuloy na namumunga.\n- **Luya (Ginger)** at **Ube** — mahabang season na root crops, 240–300 araw. Itanim sa simula ng tag-ulan (Abril–Mayo).\n- **Sibuyas (Onion)** at **Bawang (Garlic)** — malamig at tuyong buwan lang, 90–120 araw.\n- **Gabi (Taro)** — mahilig sa basang lupa, anihan 180–240 araw.\n\nMay **35 pananim sa Pilipinas** akong alam kasama ang pH range, buwan ng pagtatanim, at kaangkupan sa lupa. Itanong ang *\"ano ang puwedeng itanim ngayong buwan?\"* o mag-upload ng larawan ng lupa at sasalaan ko ang listahan para sa lupa mo.\n\nSabihin mo kung anong pananim ang inaalagaan mo at lalaliman ko ang sagot.",
+      "follow_ups": [
+        "Ano ang puwedeng itanim ngayong buwan?",
+        "Bakit naninilaw ang mga dahon ko?",
+        "Gaano kadalas akong magdidilig?"
+      ]
+    },
+    "soil_black": {
+      "title": "Itim na Lupa",
+      "patterns": [
+        "para saan ang itim na lupa", "itim na lupa", "maganda ba ang itim na lupa",
+        "mga pananim sa itim na lupa", "pagtatanim sa itim na lupa", "madilim na lupa",
+        "loam soil", "ano ang tumutubo sa itim na lupa", "ph ng itim na lupa",
+        "mayamang lupa"
+      ],
+      "keywords": ["itim", "madilim", "loam", "humus"],
+      "answer": "**Itim na lupa** ang pinakamaganda sa tatlo — mayaman ito sa organic matter at humus, mahusay mag-imbak ng tubig, at puno ng buhay-microbe.\n\n**Profile**\n- Drainage: katamtaman/maganda\n- Water retention: mataas\n- Karaniwang pH: **6.0–7.5** (malapit sa ideal)\n\n**Ano ang itatanim**\n- Halos lahat. Perpekto ito para sa **mga dahon-gulay (pechay)**, talong, sitaw, at ampalaya.\n\n**Pag-aalaga**\n- Kaunting amendment lang ang kailangan. **Panatilihin lang ang organic matter** sa pamamagitan ng magaan na taunang compost top-dress at mulch.\n- Huwag magsobra sa pagdidilig o pag-amend — ang mataas na water retention ng itim na lupa ay puwedeng maging **waterlogged** sa tag-ulan, na nagpapabulok ng ugat.\n- Takpan ng mulch para hindi matangay ng malakas na ulan ang nutrients.",
+      "follow_ups": [
+        "Ano ang puwedeng itanim ngayong buwan?",
+        "Gaano karaming compost ang ihahalo ko?",
+        "Gaano kadalas akong magdidilig?"
+      ]
+    },
+    "soil_red": {
+      "title": "Pulang Lupa",
+      "patterns": [
+        "pulang lupa", "para saan ang pulang lupa", "laterite soil", "clay soil",
+        "pulang clay", "paano mapapabuti ang pulang lupa", "pagtatanim sa pulang lupa",
+        "ph ng pulang lupa", "ano ang tumutubo sa pulang lupa", "matigas na clay",
+        "lupang malagkit"
+      ],
+      "keywords": ["pula", "laterite", "clay", "malagkit"],
+      "answer": "Ang **pulang lupa** (laterite) ay lupa sa tropiko na mayaman sa iron — acidic, maganda ang drainage kapag maluwag, pero **tumitigas kapag tuyo**.\n\n**Profile**\n- Drainage: mabilis kapag maluwag / mahina kapag siksik na\n- Water retention: mababa hanggang katamtaman\n- Karaniwang pH: **5.0–6.0** (acidic)\n\n**Ano ang itatanim**\n- Maganda dito ang cassava, kamote, at root crops. Ang sitaw, talong, at kamote ay magagandang pagpipilian.\n\n**Paano mapapabuti**\n1. **Maglagay ng agricultural lime** para pataasin ang pH papuntang 6.0–7.0 — mga 1–2 kg bawat 10 sq m.\n2. **Ihalo ang compost** (3–5 kg bawat sq m) para mabasag ang clay.\n3. **Magdagdag ng carbonized rice hull (CRH)** — ito ang pinakamahusay na solusyon sa mabigat na clay. Binubuksan nito ang lupa at pinapabuti ang drainage.\n4. **Huwag itong iproseso kapag basa** — nagiging matigas na buo-buong lupa. Mag-till kapag medyo basa lang.\n5. **Lagyan ng makapal na mulch** para hindi ito matuyo at tumigas na parang ladrilyo sa ilalim ng araw.",
+      "follow_ups": [
+        "Paano ko aayusin ang acidic na lupa?",
+        "Gaano karaming compost ang ihahalo ko?",
+        "Ano ang puwedeng itanim ngayong buwan?"
+      ]
+    },
+    "soil_yellow": {
+      "title": "Dilaw / Buhanging Lupa",
+      "patterns": [
+        "dilaw na lupa", "buhanging lupa", "para saan ang dilaw na lupa",
+        "paano mapapabuti ang dilaw na lupa", "ph ng dilaw na lupa",
+        "buhangin na lupa sa pilipinas", "ano ang tumutubo sa buhangin",
+        "ano ang tumutubo sa dilaw na lupa", "masyadong mabilis matuyo ang lupa",
+        "mabilis tumagas ang tubig", "mahinang buhangin na lupa",
+        "pataba para sa buhangin", "pagtatanim sa buhangin"
+      ],
+      "keywords": ["dilaw", "buhangin", "buhanging", "drain", "tumagas"],
+      "answer": "Ang **dilaw na lupa** ay magaspang, buhangin/loamy — butas-butas, napakabilis mag-drain, at **mabilis matangay ang nutrients**.\n\n**Profile**\n- Drainage: mabilis/mataas\n- Water retention: mababa\n- Karaniwang pH: **5.5–7.0**\n\n**Ano ang itatanim**\n- Mahal ito ng root crops: **kamote**, **kamoteng kahoy**, at maganda rin ang sitaw/ampalaya.\n- Iwasan ang mababaw ang ugat at matakaw sa tubig na pananim tulad ng pechay, maliban kung marami kang ihalo at madalas kang magdilig.\n\n**Paano mapapabuti**\n1. **Kailangan ng maraming compost** — **5–8 kg bawat sq m**, ihalo nang malalim (20–30 cm).\n2. **Magdagdag ng vermicast o hinog na dumi ng manok** — kailangan ng buhangin ng madalas na supply ng nutrients, hindi isang beses lang.\n3. **Lagyan ng makapal na mulch** (dayami, tuyong dahon) para bumagal ang evaporation at hindi matangay ng ulan ang nutrients.\n4. **Magdilig ng kaunti pero mas madalas** — dumadaan lang ang tubig, kaya kaunti ang nakakarating sa ugat.\n5. **Magdagdag ng CRH o coconut coir** para mapabuti ang kakayahang mag-imbak ng tubig at nutrients.\n\nIsipin ang dilaw na lupa na balde na may butas: kailangan mong *patuloy na lagyan*. Mas mabuti ang kaunti-kaunti at madalas kaysa isang malaking lagay.",
+      "follow_ups": [
+        "Ano ang pinakamagandang organic fertilizer para sa buhangin?",
+        "Gaano karaming compost ang ihahalo ko?",
+        "Ano ang puwedeng itanim ngayong buwan?"
+      ]
+    },
+    "drainage": {
+      "title": "Drainage at Waterlogging",
+      "patterns": [
+        "paano mapapabuti ang drainage", "waterlogged na lupa", "laging basa ang lupa",
+        "mahinang drainage", "naiipon ang tubig sa hardin", "nabubulok ang ugat",
+        "pagtaas ng garden bed", "paano gumawa ng raised bed", "sobrang basa ang lupa",
+        "baha sa hardin", "drainage sa tag-ulan", "paano ayusin ang drainage",
+        "ayusin ang drainage", "paano maayos ang drainage", "paayos ng drainage",
+        "paano ayusin ang basang lupa"
+      ],
+      "keywords": ["drainage", "waterlogged", "basang-basa", "bulok", "baha"],
+      "answer": "Ang waterlogged na lupa ay nasasakal ang ugat — isa ito sa pinakamalaking pumatay ng hardin sa Pilipinas tuwing **tag-ulan**.\n\n**Mga senyales:** naninilaw at lumalantang dahon, maasim o mabahong amoy, lumot sa ibabaw, naiipon ang tubig pagkatapos ng ulan.\n\n**Mga solusyon**\n1. **Itaas ang bed** — ito ang pinakaepektibong hakbang. Gumawa ng bed na **20–30 cm ang taas** para ang root zone ay nasa ibabaw ng water table.\n2. **Magdagdag ng carbonized rice hull (CRH), coconut coir, o magaspang na buhangin** para buksan ang mabigat na lupa.\n3. **Maghukay ng drainage canal o trench** sa paligid ng plot para may patunguhan ang tubig.\n4. **Ihalo ang compost** — ginagawang malambot at may hangin ang siksik na clay.\n5. **Itanim sa mound o ridge** ang root crops tulad ng kamote at kamoteng kahoy.\n6. **Palitan ang pananim ayon sa season** — ang kangkong at gabi ay mahilig talaga sa basang lupa.\n\nHuwag maglakad o mag-till sa basang-basang lupa — masisiksik mo ang istruktura at lalala pa ito.",
+      "follow_ups": [
+        "Gaano kadalas akong magdidilig?",
+        "Paano ko mapapabuti ang pulang lupa?",
+        "Ano ang puwedeng itanim sa tag-ulan?"
+      ]
+    },
+    "watering": {
+      "title": "Iskedyul ng Pagdidilig",
+      "patterns": [
+        "gaano kadalas akong magdidilig", "iskedyul ng pagdidilig",
+        "gaano karaming tubig ang kailangan ng halaman", "kailan magdidilig ng halaman",
+        "sobra sa tubig", "kulang sa tubig", "pinakamagandang oras ng pagdidilig",
+        "pagdidilig ng gulay", "paano malalaman kung kailangan ng tubig ang halaman",
+        "deep watering", "pagdidilig sa pilipinas", "pagdidilig sa tag-ulan",
+        "paano magdilig", "paano magdilig ng halaman", "kailan magdilig",
+        "kailan ako magdidilig", "gaano kadalas magdilig",
+        "gaano kadalas magdilig ng halaman", "magdilig ng halaman"
+      ],
+      "keywords": ["tubig", "dilig", "irigasyon", "sobra sa tubig", "kulang sa tubig"],
+      "answer": "Ang golden rule: **diligan nang malalim at hindi masyadong madalas**, hindi mababaw at madalas — inilulusog ng malalim na pagdidilig ang ugat pababa.\n\n**Paano suriin:** isawsaw ang daliri nang **2–3 cm** sa lupa. Kung tuyo sa lalim na iyon, magdilig. Kung basa, maghintay. Huwag umasa sa iskedyul lang — laging suriin.\n\n**Kondisyon sa Pilipinas**\n- **Tag-araw (Mar–May):** magdilig **araw-araw o every other day**, sa umaga.\n- **Tag-ulan (Hun–Nob):** kadalasan **hindi na kailangan magdilig** — ang panganib ay sobra sa tubig at root rot. Suriin muna ang drainage.\n\n**Pinakamagandang oras:** madaling umaga (6–8 AM). Ang pagdidilig sa gabi ay nag-aanyaya ng fungal disease dahil basa ang dahon magdamag.\n\n**Gaano karami:** basain ang root zone hanggang **15–20 cm ang lalim** imbes na iwiwisik lang sa ibabaw. Para sa paso, diligan hanggang lumabas ang tubig sa ilalim.\n\n**Mga tip**\n- **Mag-mulch** para bawasan ang water loss hanggang 50%.\n- **Buhangin (dilaw) na lupa** ay kailangan ng mas kaunti at mas madalas — dumadaan lang ang tubig.\n- **Itim na lupa** ay nag-iimbak ng tubig, kaya magdilig nang kaunti o mababasa ito nang sobra.",
+      "follow_ups": [
+        "Paano ko mapapabuti ang drainage?",
+        "Paano gumawa ng compost?",
+        "Bakit naninilaw ang mga dahon ko?"
+      ]
+    },
+    "mulch": {
+      "title": "Mulching",
+      "patterns": [
+        "ano ang mulch", "dapat ba akong mag-mulch", "mulching",
+        "mulch para sa hardin", "dayami na mulch", "paano mag-mulch",
+        "benepisyo ng mulch", "takpan ang lupa", "damo na mulch", "plastic mulch"
+      ],
+      "keywords": ["mulch", "mulching", "dayami"],
+      "answer": "Ang **mulching** ay pagtakip sa ibabaw ng lupa ng layer ng organic material — dayami, tuyong dahon, balat ng niyog, ginupit na damo, o wood chips.\n\n**Bakit sulit ito sa Pilipinas**\n- **Pumipigil sa damo** sa pamamagitan ng pagharang sa liwanag\n- **Binabawasan ang water loss** hanggang 50% — malaking tulong sa tag-araw, at kritikal sa buhangin/dilaw na lupa\n- **Pinalalamig ang root zone** sa matinding init\n- **Pumipigil sa erosion at nutrient leaching** tuwing malakas ang ulan\n- **Pinapakain ang buhay sa lupa** habang nabubulok\n\n**Paano:** maglatag ng **5–8 cm na layer** sa paligid ng halaman, na may ilang sentimetro ang layo **mula sa tangkay** para hindi mabulok ito dahil sa halumigmig.\n\nHuwag ihalo nang malalim ang sariwang dayami o wood chips — ninanakaw nito ang nitrogen habang nabubulok. Panatilihin ang mulch **sa ibabaw**.",
+      "follow_ups": [
+        "Gaano kadalas akong magdidilig?",
+        "Paano gumawa ng compost?",
+        "Paano ko mapapabuti ang dilaw na lupa?"
+      ]
+    },
+    "pests": {
+      "title": "Organic na Pest Control",
+      "patterns": [
+        "paano ko kokontrolin ang peste", "peste sa halaman ko", "aphids", "fruit fly",
+        "organic pest control", "mga insektong kumakain sa halaman", "uod sa dahon",
+        "caterpillar", "whiteflies", "snail na kumakain ng halaman",
+        "paano pumatay ng peste nang natural", "pest management", "kumakain ng dahon",
+        "mga insekto sa halaman"
+      ],
+      "keywords": ["peste", "aphid", "fruit fly", "insekto", "uod", "snail", "whitefly"],
+      "answer": "Ang organic pest control ay sumusunod sa simpleng escalation — simulan sa pinakabanayad:\n\n**1. Pag-iwas muna**\n- Mas lumalaban sa peste ang malusog at tamang-tamang pinapakain na halaman. Huwag magsobra sa nitrogen — ang malambot na bagong tubo ay atraksyon ng aphids.\n- **Companion planting** ng marigold, basil, o tanglad para itaboy ang insekto.\n- **Crop rotation** — huwag itanim ang parehong pamilya sa parehong bed nang sunod-sunod.\n\n**2. Physical control**\n- **Kamutin** ang caterpillar at snail tuwing madaling umaga.\n- **Buhusan ng malakas na tubig** ang aphids para matangay.\n- Yellow sticky traps para sa whiteflies at fruit fly.\n\n**3. Simpleng spray (gawa sa bahay)**\n- **Soap spray:** 1 kutsarang banayad na liquid soap bawat 1 L tubig — pumapatay ng malambot ang katawan na insekto tulad ng aphids. I-spray sa gabi.\n- **Garlic-chili spray:** i-blend ang bawang, maanghang na sili, at tubig; salain at i-spray. Nakakataboy sa karamihan ng kumakain ng dahon.\n- **Abo ng kahoy** sa paligid ng punla para itaboy ang snail at slug.\n\n**4. Para sa pinakamalaking peste**\n- **Fruit fly** (number one na kaaway ng ampalaya at talong): lagyan ng supot ang murang bunga, anihin nang maaga, at pulutin ang nalaglag na bunga para hindi makapagparami ang larvae.\n\nLaging i-test ang anumang spray sa isang dahon muna, at huwag mag-spray sa tirik na tirik ang araw.",
+      "follow_ups": [
+        "Bakit naninilaw ang dahon ng ampalaya ko?",
+        "Paano ko maiiwasan ang sakit ng halaman?",
+        "Ano ang puwedeng itanim ngayong buwan?"
+      ]
+    },
+    "disease": {
+      "title": "Mga Sakit ng Halaman",
+      "patterns": [
+        "sakit ng halaman", "fungal disease", "nalalanta ang halaman ko",
+        "batik sa dahon", "leaf spots", "powdery mildew", "namamatay ang halaman",
+        "sakit mula sa lupa", "damping off", "root rot", "amag sa dahon", "blight",
+        "puting pulbos sa dahon", "pulbos sa dahon", "puting batik sa dahon",
+        "puting pulbos sa dahon ko", "abong pulbos sa dahon", "may puting pulbos ang dahon"
+      ],
+      "keywords": ["sakit", "fungus", "fungal", "mildew", "blight", "lanta", "bulok", "batik", "pulbos"],
+      "answer": "Karamihan ng sakit sa hardin sa Pilipinas ay **fungal**, at kadalasan ito ay dahil sa **sobrang halumigmig**.\n\n**Mga karaniwang problema**\n- **Nalalanta kahit basa ang lupa** → root rot. Itigil ang pagdidilig, pagbutihin ang drainage, alisin ang apektadong halaman.\n- **Puting pulbos sa dahon** → powdery mildew. Pagbutihin ang airflow, mag-spray ng baking soda solution (1 kutsarita bawat 1 L tubig + isang patak ng sabon).\n- **Madidilim na batik na kumakalat** → leaf spot. Alisin ang apektadong dahon, iwasan ang pagdidilig sa ibabaw ng dahon.\n- **Bumagsak ang punla sa base** → damping off. Gumamit ng malinis na lupa, huwag magsobra sa tubig, siguraduhin ang airflow.\n\n**Pag-iwas (ito ang pinakamalaking tulong)**\n1. **Diligan ang lupa, hindi ang dahon** — dito nagsisimula ang fungus.\n2. **Magdilig sa umaga** para matuyo ang dahon bago maggabi.\n3. **Bigyan ng espasyo ang halaman** para sa airflow.\n4. **I-rotate ang pananim** — huwag itanim ang parehong pamilya sa parehong lugar.\n5. **Mag-mulch** para hindi tumalsik ang spores mula sa lupa papunta sa dahon.\n6. **Alisin at sunugin** ang apektadong bahagi ng halaman — huwag itong i-compost.\n\nAng malusog na buhay sa lupa ang pinakamagandang depensa: ang lupang mayaman sa compost ay nagpapalaki ng halaman na mas lumalaban sa sakit.",
+      "follow_ups": [
+        "Paano ko mapapabuti ang drainage?",
+        "Gaano kadalas akong magdidilig?",
+        "Paano ako magkokontrol ng peste nang organic?"
+      ]
+    },
+    "planting_season": {
+      "title": "Panahon ng Pagtatanim sa Pilipinas",
+      "patterns": [
+        "ano ang pinakamagandang panahon ng pagtatanim", "pagtatanim sa tag-ulan",
+        "pagtatanim sa tag-araw", "panahon ng pagtatanim sa pilipinas",
+        "kailan pinakamagandang magtanim ng gulay", "pananim sa tag-ulan",
+        "planting calendar pilipinas", "tag-ulan", "tag-araw", "kailan ako magtatanim",
+        "amihan", "habagat", "tag-ulan at tag-araw"
+      ],
+      "keywords": ["panahon", "tag-ulan", "tag-araw", "ulan", "summer", "calendar", "buwan"],
+      "answer": "May dalawang pangunahing panahon ang Pilipinas, at binabago nito kung ano ang puwede mong itanim:\n\n**Tag-ulan / Habagat (Hunyo–Nobyembre)**\n- Sagana sa ulan, mataas ang humidity, mataas ang panganib ng fungus.\n- **Pinakamalaking panganib:** waterlogging at root rot — itaas ang bed at suriin ang drainage.\n- **Magagandang pananim:** cassava (itanim Mayo–Hulyo), kangkong, gabi, munggo, mais.\n- Pinakamagandang panahon para **magtanim ng punong prutas** — kakaunti lang ang kailangang dilig para makapag-umpisa.\n\n**Tag-araw / Amihan (Disyembre–Mayo)**\n- Ang malamig at tuyong buwan (Dis–Peb) ang **pinakamagandang growing window ng taon** para sa gulay.\n- **Pinakamaganda para sa:** pechay, ampalaya, talong, sitaw, kamatis — ang klasikong *cool dry* na gulay.\n- **Panganib:** drought stress pagdating ng Mar–May. Mag-mulch nang makapal, magdilig nang malalim.\n\n**Sa maikling salita:** halos lahat ay pinakamaganda kapag itinanim sa **simula ng tag-araw (Okt–Peb)**. Ang tag-ulan ay panahon ng root crops at mga pananim na mahilig sa tubig.\n\nItanong ang *\"ano ang puwedeng itanim ngayong buwan?\"* at itatapat ko ang mga pananim sa kasalukuyang buwan.",
+      "follow_ups": [
+        "Ano ang puwedeng itanim ngayong buwan?",
+        "Paano ko mapapabuti ang drainage?",
+        "Ano ang puwedeng itanim sa tag-ulan?"
+      ]
+    },
+    "what_to_plant_now": {
+      "title": "Ano ang Itatanim Ngayon",
+      "patterns": [
+        "ano ang puwedeng itanim ngayong buwan", "ano ang puwedeng itanim ngayon",
+        "ano ang dapat kong itanim ngayon", "ano ang itatanim ngayong buwan",
+        "ano ang puwedeng itanim sa ngayon", "pagtatanim ngayon",
+        "anong pananim ang puwede ngayon", "ano ang puwede kong itanim ngayon",
+        "magbigay ng pananim para sa buwan na ito", "ano ang dapat itanim ngayong season",
+        "ano ang puwede kong itanim", "kasalukuyang panahon ng pagtatanim"
+      ],
+      "keywords": ["itanim", "pagtatanim", "ngayon", "ngayong buwan", "magtanim"],
+      "answer": "Tingnan ko kung ano ang bagay sa kasalukuyang buwan sa Pilipinas..."
+    },
+    "germination": {
+      "title": "Buto at Pagsibol",
+      "patterns": [
+        "gaano katagal bago sumibol ang buto", "tagal ng pagsibol",
+        "paano magsimula ng buto", "seed starting", "paano magpatubo ng buto",
+        "pag-aalaga ng punla", "paano mag-alaga ng punla", "transplanting ng punla",
+        "nursery", "gaano kalalim itanim ang buto", "hindi sumisibol ang buto"
+      ],
+      "keywords": ["sibol", "buto", "punla", "tubo", "germinate"],
+      "answer": "**Mga batayan ng pagsibol**\n- **Itanim sa lalim na 2–3 beses ang diameter ng buto.** Kapag mas malalim, maraming buto ang nabubulok.\n- Panatilihing **basa-basa pero hindi lumulubog** ang medium — mas maganda ang spray bottle kaysa watering can.\n- **Pinapabilis ng init ang pagsibol.** Karaniwang sapat na ang init sa Pilipinas; hindi na kailangan ng heating.\n- **Liwanag:** karamihan ng buto ay sumisibol sa dilim, pero kapag tumubo na, kailangan ng buong sikat ng araw ang punla o magiging mahaba at maputla ito.\n\n**Karaniwang tagal ng pagsibol**\n- Pechay: **3–5 araw** (pinakamabilis)\n- Sitaw: 4–8 araw\n- Ampalaya: 5–10 araw\n- Talong: 7–14 araw\n- Kamote: 7–10 araw\n\n**Pag-aalaga ng punla**\n1. Gumamit ng magaan na halo — lupa + compost + CRH.\n2. Itanim sa tray o recycled na lalagyan na may butas sa ilalim.\n3. **I-hardening off** bago i-transplant: ilagay sa partial na sikat ng araw nang 3–5 araw para hindi mabigla.\n4. I-transplant sa **hapon** o sa maulap na araw, at diligan agad.",
+      "follow_ups": [
+        "Ano ang puwedeng itanim ngayong buwan?",
+        "Gaano katagal bago anihin?",
+        "Paano gumawa ng compost?"
+      ]
+    },
+    "harvest": {
+      "title": "Araw Bago Anihin",
+      "patterns": [
+        "gaano katagal bago anihin", "araw bago anihin", "kailan ako mag-aani",
+        "panahon ng pag-aani", "gaano katagal bago tumubo",
+        "kailan ready ang halaman ko", "paano malalaman kung ready nang anihin",
+        "tagal ng pananim", "ilang araw bago tumubo ang pechay",
+        "kailan anihin", "kailan anihin ang kamatis", "kailan anihin ang gulay",
+        "kailan anihin ang pechay", "kailan anihin ang talong",
+        "kailan anihin ang ampalaya", "kailan anihin ang sitaw"
+      ],
+      "keywords": ["ani", "anihin", "araw", "ready"],
+      "answer": "Ito ang aasahan mo sa Pilipinas:\n\n- **Pechay** — sumisibol 3–5 araw, anihan **30–45 araw** (pinakamabilis)\n- **Sitaw (string beans)** — 4–8 araw, anihan 50–65 araw\n- **Ampalaya** — 5–10 araw, anihan 60–80 araw\n- **Talong (eggplant)** — 7–14 araw, anihan 80–100 araw\n- **Kamote** — 7–10 araw, anihan 90–120 araw\n- **Kamoteng kahoy** — 7–14 araw, anihan 240–300 araw\n\n**Mga tip**\n- **Pechay** ang pinakamabilis ang balik — pinakamagandang simulan kung nagsisimula ka pa lang.\n- **Dahon-gulay:** anihin ang labas na dahon at patuloy pa ring tutubo ang halaman.\n- **Sitaw/ampalaya:** anihin ang pod nang bata at madalas — ang regular na pag-ani ay *nagpapataas* ng yield.\n- **Root crops:** pansinin ang pagningning at pagkamatay ng dahon sa ibabaw — iyon ang senyales.\n- **Mag-ani sa umaga** habang malamig para mas matagal ang shelf life.",
+      "follow_ups": [
+        "Ano ang puwedeng itanim ngayong buwan?",
+        "Paano ko iimbak ang ani?",
+        "Paano ako magkokontrol ng peste nang organic?"
+      ]
+    },
+    "container_gardening": {
+      "title": "Container at Urban Gardening",
+      "patterns": [
+        "container gardening", "urban gardening", "paano magtanim sa paso",
+        "potting soil", "lupa para sa indoor plants", "rooftop gardening",
+        "pagtatanim sa maliit na espasyo", "ano ang puwedeng itanim sa paso",
+        "hardin sa balkonahe", "lupa para sa paso", "pagtatanim ng gulay sa paso",
+        "paano mag-alaga ng halaman sa paso", "pag-aalaga ng halaman sa paso",
+        "paano alagaan ang halaman sa paso", "paano mag-alaga ng gulay sa paso"
+      ],
+      "keywords": ["paso", "pot", "urban", "balkonahe", "rooftop", "indoor"],
+      "answer": "Mabisa ang container gardening sa Pilipinas — kontrolado mo ang lupa, kaya nalalampasan ang karamihan ng problema sa lupa.\n\n**Recipe ng potting mix (ayon sa volume)**\n- **1 bahagi garden soil**\n- **1 bahagi compost**\n- **1 bahagi carbonized rice hull (CRH) o coconut coir** — para sa drainage at aeration\n\n**Mahahalagang tuntunin**\n1. **Laging gumamit ng paso na may butas sa ilalim.** Ang basang paso ay pinakamabilis magpabulok ng ugat.\n2. **Mas malaki, mas maganda** — kailangan ng dahon-gulay ng 15–20 cm lalim, ang kamatis at talong ay hindi bababa sa **25–30 cm**.\n3. **Magdilig nang mas madalas kaysa sa lupa** — mabilis matuyo ang paso, lalo na ang maliliit sa tirik na araw.\n4. **Magpataba nang regular** — mabilis maanod ang nutrients sa paso. Mag-side-dress ng vermicast bawat 3–4 linggo.\n5. **Ilipat ang paso** para habulin ang araw sa umaga at makaiwas sa matinding init sa tanghali.\n\n**Pinakamagandang pananim sa paso:** pechay, kangkong, sili, kamatis, okra, herbs (basil, mint, tanglad), at kahit naka-stake na ampalaya sa trellis sa balkonahe.",
+      "follow_ups": [
+        "Gaano kadalas akong magdidilig?",
+        "Ano ang pinakamagandang organic fertilizer?",
+        "Ano ang puwedeng itanim ngayong buwan?"
+      ]
+    },
+    "crop_rotation": {
+      "title": "Crop Rotation at Fertility ng Lupa",
+      "patterns": [
+        "crop rotation", "fertility ng lupa", "paano panatilihing malusog ang lupa",
+        "pagbutihin ang kalusugan ng lupa", "nitrogen fixing", "legumes",
+        "green manure", "cover crops", "pagod na ang lupa", "pagpapahinga ng lupa",
+        "soil conservation", "sustainable farming", "organic farming soil",
+        "paano i-rotate ang pananim", "i-rotate ang pananim",
+        "paano mag-rotate ng pananim", "pag-ikot ng pananim", "paano palitan ang pananim"
+      ],
+      "keywords": ["rotation", "fertility", "legume", "green manure", "cover crop", "sustainable"],
+      "answer": "Ang lupa ay isang buhay na sistema — **kung paano ka mag-rotate ng pananim** ang mas mahalaga kaysa sa dami ng patabang binibili mo.\n\n**I-rotate ayon sa pamilya ng halaman**\nHuwag sundan ang isang pananim ng kaparehong pamilya (hal. talong → kamatis → sili ay lahat nightshade). Dito nag-iipon ng peste at sakit ang lupa.\n\n**Simpleng 3-season rotation**\n1. **Dahon** (pechay — matakaw sa nitrogen)\n2. **Legume** (sitaw o munggo — **nag-aayos ng nitrogen** pabalik sa lupa)\n3. **Root** (kamote o cassava — gumagamit ng nutrients sa mas malalim)\n\n**Ibalik ang fertility**\n- **Itanim ang legumes (munggo, sitaw) bilang green manure** — hayaang tumubo, tapos putulin at ihalo sa lupa. Libreng nitrogen.\n- **Maglagay ng compost bawat season** — ito ang pinakamagandang long-term investment.\n- **Mag-mulch** para protektahan ang ibabaw ng lupa at pakainin ang buhay dito.\n- **Huwag iwanang hubad ang lupa** — natutuyo at naaanod ang hubad na lupa sa init at ulan.\n- **Bawasan ang malalim na pag-till** — sinisira nito ang fungal network na nagpapagana sa lupa.\n\n**Senyales ng pagod na lupa:** maputlang halaman, mahinang ani, matigas at nagbabalat ang ibabaw, kakaunting bulate. Ang compost + rotation + mulch ang magbabalik nito.",
+      "follow_ups": [
+        "Paano gumawa ng compost?",
+        "Ano ang puwedeng itanim ngayong buwan?",
+        "Paano ko susuriin ang pH ng lupa?"
+      ]
+    },
+    "soil_types_overview": {
+      "title": "Mga Uri ng Lupa",
+      "patterns": [
+        "ano ang mga uri ng lupa", "mga uri ng lupa", "mga uri ng lupa sa pilipinas",
+        "paano malalaman ang uri ng lupa", "kilalanin ang lupa",
+        "anong klaseng lupa ang mayroon ako", "pagkakaiba ng mga uri ng lupa",
+        "anong lupa ang pinakamaganda", "pinakamagandang lupa para sa gulay"
+      ],
+      "keywords": ["uri ng lupa", "uri", "kilalanin", "klaseng lupa", "anong lupa"],
+      "answer": "Ito ang **tatlong pangunahing uri ng lupa** na makikita sa mga hardin sa Pilipinas:\n\n**Itim na Lupa**\n- Mayaman sa organic matter at humus; lubos na fertile.\n- Mahusay mag-imbak ng tubig, katamtaman/magandang drainage, pH **6.0–7.5**.\n- **Pinakamaganda sa tatlo** — halos lahat ng pananim tumutubo nang kaunting amendment lang.\n\n**Pulang Lupa (laterite)**\n- Mayaman sa iron, acidic, maganda ang drainage kapag maluwag pero **tumitigas kapag tuyo**.\n- pH **5.0–6.0** — kailangan ng lime at maraming organic matter.\n- Maganda para sa cassava, kamote, at root crops.\n\n**Dilaw na Lupa (buhangin/loamy)**\n- Magaspang, butas-butas, **napakabilis mag-drain at mabilis matangay ang nutrients**.\n- pH 5.5–7.0 — kailangan ng maraming compost at madalas na pagpapataba.\n- Maganda para sa root crops, mahirap para sa mga dahon-gulay na matakaw sa tubig.\n\n**Hindi sigurado kung alin ang lupa mo?** Mag-upload ng larawan mula sa sidebar at susuriin ko ito para sa iyo.",
+      "follow_ups": [
+        "Ano ang puwedeng itanim ngayong buwan?",
+        "Paano ko mapapabuti ang pulang lupa?",
+        "Paano ko mapapabuti ang dilaw na lupa?"
+      ]
+    },
+    "typhoon": {
+      "title": "Proteksyon sa Bagyo at Malakas na Ulan",
+      "patterns": [
+        "paano protektahan ang halaman sa bagyo", "malakas na ulan", "pinsala ng bagyo",
+        "protektahan ang halaman sa malakas na ulan", "pagtatanim sa panahon ng bagyo",
+        "pinsala ng hangin", "pinsala ng ulan sa halaman",
+        "paano ihanda ang hardin sa bagyo"
+      ],
+      "keywords": ["bagyo", "storm", "hangin", "malakas na ulan", "proteksyon"],
+      "answer": "Humigit-kumulang **20 bagyo** ang dumadaan sa Pilipinas bawat taon, kaya bahagi na ng paghahardin dito ang paghahanda sa bagyo.\n\n**Bago ang bagyo**\n1. **Anihin ang ready na** — huwag ipagsapalaran ang bungang maaaring masira.\n2. **Suportahan at itali** ang matataas na halaman (kamatis, talong, ampalaya) nang matibay pero may malambot na pang-itali para hindi maputol ang tangkay.\n3. **Alisin ang trellis at net** na puwedeng maging parang layag — o ihiga ang mga baging.\n4. **Linisin ang drainage canal** para may patunguhan ang tubig.\n5. **Ilipat ang paso** sa protektadong pader o sa loob ng bahay kung kaya.\n6. **Mag-mulch nang magaan** para hindi liparin, at tingnan kung matatag ang raised bed.\n\n**Pagkatapos ng bagyo**\n1. **Ayusin muli ang drainage** at tingnan kung waterlogged ang ugat.\n2. **Alisin agad** ang sirang o may sakit na dahon — ang sugat ay nag-aanyaya ng fungus.\n3. **Hugasan ang putik sa dahon** ng malinis na tubig para makapag-photosynthesize muli.\n4. **Huwag agad magpataba** — bigyan ng isang linggo ang halaman para makabawi.\n5. **Bantayan ang fungal disease** sa mga susunod na linggo — tumataas ang panganib pagkatapos ng bagyo.\n\n**Magdisenyo para sa tibay:** raised beds, windbreaks (tanglad, saging, o bamboo screen), at mabilis tumubong pananim tulad ng pechay na natatapos bago ang pinakamalalang buwan.",
+      "follow_ups": [
+        "Paano ko mapapabuti ang drainage?",
+        "Ano ang puwedeng itanim sa tag-ulan?",
+        "Paano ko maiiwasan ang sakit ng halaman?"
+      ]
+    }
+  }
+}

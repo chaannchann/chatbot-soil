@@ -8,9 +8,19 @@ const analyzeBtn = document.getElementById('analyzeBtn');
 const chatImageInput = document.getElementById('chatImageInput');
 const chatCameraBtn = document.getElementById('chatCameraBtn');
 const plantNowBtn = document.getElementById('plantNowBtn');
+const langToggleBtn = document.getElementById('langToggleBtn');
+const welcomeTitle = document.getElementById('welcomeTitle');
+const welcomeText = document.getElementById('welcomeText');
+const photoBtnLabel = document.getElementById('photoBtnLabel');
+const sendBtnLabel = document.getElementById('sendBtnLabel');
 
 let selectedFile = null;
 let lastSoilType = null;
+
+// Chat language: "en" or "tl". The toggle also localizes the suggested
+// questions, the welcome banner, and the planting calendar card.
+const LANG_KEY = 'soilmate_lang';
+let chatLanguage = localStorage.getItem(LANG_KEY) === 'tl' ? 'tl' : 'en';
 
 // Stable per-browser id so the chatbot can remember context between turns
 // (e.g. "how much compost for THIS soil?").
@@ -163,11 +173,12 @@ function appendMessage(sender, content, isHtml = false) {
 // Compact, collapsible crop list shared by the analysis and planting cards.
 let cropGroupCounter = 0;
 
-function renderCropGrid(crops, emptyMessage) {
+function renderCropGrid(crops, emptyMessage, language = 'en') {
     if (!crops || !crops.length) {
         return `<p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3 dark:text-slate-400 dark:bg-slate-800/60 dark:border-slate-700">${emptyMessage}</p>`;
     }
 
+    const tl = language === 'tl';
     const groupId = `crop-group-${++cropGroupCounter}`;
     const visibleCount = 6;
 
@@ -175,8 +186,8 @@ function renderCropGrid(crops, emptyMessage) {
         const isExtra = index >= visibleCount;
         const extraClass = isExtra ? ' hidden' : '';
         const extraAttr = isExtra ? ` data-crop-extra="${groupId}"` : '';
-        const local = escapeHtml(c.local_name || c.category || 'Philippine crop');
-        const season = escapeHtml(c.ideal_planting_season || 'Year-round');
+        const local = escapeHtml(c.local_name || c.category || (tl ? 'Pananim sa Pilipinas' : 'Philippine crop'));
+        const season = escapeHtml(c.ideal_planting_season || (tl ? 'Buong taon' : 'Year-round'));
 
         return `
             <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 dark:bg-emerald-950/40 dark:border-emerald-900${extraClass}"${extraAttr}>
@@ -185,11 +196,11 @@ function renderCropGrid(crops, emptyMessage) {
                         <p class="font-bold text-emerald-950 text-sm truncate dark:text-emerald-100">${escapeHtml(c.common_name)}</p>
                         <p class="text-[11px] text-emerald-700/80 truncate dark:text-emerald-300/80">${local}</p>
                     </div>
-                    ${c.in_season_now ? '<span class="shrink-0 text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-semibold dark:bg-amber-900/50 dark:text-amber-200">In season</span>' : ''}
+                    ${c.in_season_now ? `<span class="shrink-0 text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-semibold dark:bg-amber-900/50 dark:text-amber-200">${tl ? 'Kapanahunan' : 'In season'}</span>` : ''}
                 </div>
                 <div class="mt-2 space-y-0.5 text-[11px] text-slate-600 dark:text-slate-400">
-                    <p><strong class="text-slate-700 dark:text-slate-300">Harvest:</strong> ${c.harvest_days_min}–${c.harvest_days_max} days</p>
-                    <p class="truncate" title="${season}"><strong class="text-slate-700 dark:text-slate-300">Season:</strong> ${season}</p>
+                    <p><strong class="text-slate-700 dark:text-slate-300">${tl ? 'Ani:' : 'Harvest:'}</strong> ${c.harvest_days_min}–${c.harvest_days_max} ${tl ? 'araw' : 'days'}</p>
+                    <p class="truncate" title="${season}"><strong class="text-slate-700 dark:text-slate-300">${tl ? 'Panahon:' : 'Season:'}</strong> ${season}</p>
                 </div>
             </div>
         `;
@@ -198,7 +209,7 @@ function renderCropGrid(crops, emptyMessage) {
     const toggle = crops.length > visibleCount
         ? `<button type="button" data-show-crops="${groupId}" data-total="${crops.length}" aria-expanded="false"
                    class="mt-2 w-full sm:w-auto text-xs font-semibold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 px-3 py-2 rounded-xl transition dark:text-emerald-300 dark:hover:text-emerald-200 dark:bg-emerald-900/40 dark:hover:bg-emerald-900/70 dark:border-emerald-800">
-               Show all ${crops.length} crops
+               ${tl ? `Ipakita lahat ng ${crops.length} pananim` : `Show all ${crops.length} crops`}
            </button>`
         : '';
 
@@ -215,7 +226,10 @@ chatFeed.addEventListener('click', (event) => {
 
     const willShow = extras[0].classList.contains('hidden');
     extras.forEach(item => item.classList.toggle('hidden', !willShow));
-    button.textContent = willShow ? 'Show fewer crops' : `Show all ${button.dataset.total} crops`;
+    const tl = chatLanguage === 'tl';
+    button.textContent = willShow
+        ? (tl ? 'Ipakita ang kaunti' : 'Show fewer crops')
+        : (tl ? `Ipakita lahat ng ${button.dataset.total} pananim` : `Show all ${button.dataset.total} crops`);
     button.setAttribute('aria-expanded', String(willShow));
 });
 
@@ -307,7 +321,12 @@ async function sendMessage(text) {
         const res = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text, session_id: SESSION_ID, soil_type: lastSoilType })
+            body: JSON.stringify({
+                message: text,
+                session_id: SESSION_ID,
+                soil_type: lastSoilType,
+                lang: chatLanguage
+            })
         });
         const data = await res.json();
         appendMessage('bot', data.reply);
@@ -319,7 +338,9 @@ async function sendMessage(text) {
             setClearHistoryVisible(true);
         }
     } catch (err) {
-        appendMessage('bot', 'Error communicating with server.');
+        appendMessage('bot', chatLanguage === 'tl'
+            ? 'Error sa pakikipag-usap sa server.'
+            : 'Error communicating with server.');
     }
 }
 
@@ -407,8 +428,105 @@ async function analyzeSelectedImage() {
 
 analyzeBtn.addEventListener('click', analyzeSelectedImage);
 
+// ------------------------- WEBCAM CAPTURE -------------------------
+const cameraModal = document.getElementById('cameraModal');
+const cameraVideo = document.getElementById('cameraVideo');
+const cameraCanvas = document.getElementById('cameraCanvas');
+const cameraStatus = document.getElementById('cameraStatus');
+const cameraCaptureBtn = document.getElementById('cameraCaptureBtn');
+const cameraUploadBtn = document.getElementById('cameraUploadBtn');
+const cameraCloseBtn = document.getElementById('cameraCloseBtn');
+
+// Phones and tablets keep their native camera sheet; desktops use the webcam modal.
+const useNativeCamera = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+let cameraStream = null;
+
+function closeCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    cameraVideo.srcObject = null;
+    cameraCaptureBtn.disabled = true;
+    cameraModal.classList.add('hidden');
+    cameraModal.classList.remove('flex');
+}
+
+async function openCamera() {
+    // No getUserMedia, or a plain-http LAN address: fall back to the file picker.
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        chatImageInput.click();
+        return;
+    }
+
+    cameraModal.classList.remove('hidden');
+    cameraModal.classList.add('flex');
+    cameraStatus.textContent = 'Starting camera...';
+    cameraStatus.classList.remove('hidden');
+    cameraCaptureBtn.disabled = true;
+
+    try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+        });
+
+        // The modal may have been closed while the permission prompt was open.
+        if (cameraModal.classList.contains('hidden')) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+            return;
+        }
+
+        cameraVideo.srcObject = cameraStream;
+        await cameraVideo.play();
+        cameraStatus.classList.add('hidden');
+        cameraCaptureBtn.disabled = false;
+    } catch (err) {
+        // No webcam, permission denied, or the camera is busy.
+        closeCamera();
+        chatImageInput.click();
+    }
+}
+
+function capturePhoto() {
+    if (!cameraStream || !cameraVideo.videoWidth) return;
+
+    cameraCanvas.width = cameraVideo.videoWidth;
+    cameraCanvas.height = cameraVideo.videoHeight;
+    cameraCanvas.getContext('2d').drawImage(cameraVideo, 0, 0, cameraCanvas.width, cameraCanvas.height);
+
+    cameraCanvas.toBlob((blob) => {
+        if (!blob) return;
+
+        const file = new File([blob], `soil-photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        closeCamera();
+
+        selectedFile = file;
+        imagePreview.src = URL.createObjectURL(file);
+        imagePreviewContainer.classList.remove('hidden');
+        analyzeSelectedImage();
+    }, 'image/jpeg', 0.92);
+}
+
 // Camera option before the chat input: take/select a photo and analyze immediately.
-chatCameraBtn.addEventListener('click', () => chatImageInput.click());
+chatCameraBtn.addEventListener('click', () => {
+    if (useNativeCamera) {
+        chatImageInput.click();
+    } else {
+        openCamera();
+    }
+});
+cameraCaptureBtn.addEventListener('click', capturePhoto);
+cameraUploadBtn.addEventListener('click', () => { closeCamera(); chatImageInput.click(); });
+cameraCloseBtn.addEventListener('click', closeCamera);
+cameraModal.addEventListener('click', (event) => {
+    if (event.target === cameraModal) closeCamera();
+});
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !cameraModal.classList.contains('hidden')) closeCamera();
+});
+window.addEventListener('pagehide', closeCamera);
 
 chatImageInput.addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
@@ -424,28 +542,33 @@ chatImageInput.addEventListener('change', (e) => {
 // Generate a card for the monthly planting calendar
 function renderPlantingCard(data) {
     const crops = data.crops || [];
-    const cropsHtml = renderCropGrid(crops, 'No crops are listed for this month yet.');
+    const tl = data.language === 'tl';
+    const cropsHtml = renderCropGrid(
+        crops,
+        tl ? 'Wala pang nakalista na pananim para sa buwang ito.' : 'No crops are listed for this month yet.',
+        data.language,
+    );
 
     return `
         <div class="space-y-3">
             <div class="flex items-center justify-between gap-2 flex-wrap border-b border-slate-100 pb-2 dark:border-slate-800">
-                <span class="font-bold text-base text-slate-900 dark:text-white">What to Plant in ${data.month_name}</span>
+                <span class="font-bold text-base text-slate-900 dark:text-white">${tl ? 'Ano ang Itatanim sa' : 'What to Plant in'} ${data.month_name}</span>
                 <span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-semibold dark:bg-emerald-900/60 dark:text-emerald-200">${data.season}</span>
             </div>
 
-            ${data.filtered_by_soil ? `<p class="text-xs text-slate-500 dark:text-slate-400">Filtered for your <strong>${data.soil_type}</strong>.</p>` : ''}
+            ${data.filtered_by_soil ? `<p class="text-xs text-slate-500 dark:text-slate-400">${tl ? 'Nasala para sa iyong' : 'Filtered for your'} <strong>${data.soil_type}</strong>.</p>` : ''}
             ${data.note ? `<p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded-lg dark:text-amber-200 dark:bg-amber-950/40 dark:border-amber-900">${data.note}</p>` : ''}
 
             <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
-                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Recommended crops</span>
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">${tl ? 'Mga inirerekomendang pananim' : 'Recommended crops'}</span>
                 <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full dark:text-emerald-300 dark:bg-emerald-900/40 dark:border-emerald-800">
-                    ${crops.length} options
+                    ${crops.length} ${tl ? 'na opsyon' : 'options'}
                 </span>
             </div>
             ${cropsHtml}
 
             <div class="bg-amber-50 border border-amber-200/80 p-3 rounded-xl text-xs text-amber-900 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-200">
-                <strong class="font-bold block mb-1">Season Tip:</strong>
+                <strong class="font-bold block mb-1">${tl ? 'Tip para sa season:' : 'Season Tip:'}</strong>
                 ${data.season_tip}
             </div>
         </div>
@@ -455,21 +578,29 @@ function renderPlantingCard(data) {
 // Monthly planting calendar (shared by the sidebar button and the chip)
 async function askPlantNow() {
     closeSidebar();
-    appendMessage('user', 'What can I plant this month?');
+    const tl = chatLanguage === 'tl';
+    appendMessage('user', tl ? 'Ano ang puwedeng itanim ngayong buwan?' : 'What can I plant this month?');
 
     try {
-        const query = lastSoilType ? `?soil=${encodeURIComponent(lastSoilType)}` : '';
-        const res = await fetch('/api/plant-now' + query);
+        const params = new URLSearchParams();
+        if (lastSoilType) params.set('soil', lastSoilType);
+        params.set('lang', chatLanguage);
+        const res = await fetch('/api/plant-now?' + params.toString());
         const data = await res.json();
 
         if (!res.ok || data.error) {
-            appendMessage('bot', `<strong>Server Error:</strong> ${data.error || 'Could not load the planting calendar'}`, true);
+            const message = data.error || (tl
+                ? 'Hindi ma-load ang planting calendar.'
+                : 'Could not load the planting calendar.');
+            appendMessage('bot', `<strong>${tl ? 'Error sa server' : 'Server Error'}:</strong> ${message}`, true);
             return;
         }
 
         appendMessage('bot', renderPlantingCard(data), true);
     } catch (err) {
-        appendMessage('bot', `Failed to load the planting calendar: ${err.message}`);
+        appendMessage('bot', tl
+            ? `Hindi ma-load ang planting calendar: ${err.message}`
+            : `Failed to load the planting calendar: ${err.message}`);
     }
 }
 
@@ -519,20 +650,50 @@ window.addEventListener('resize', () => {
 });
 
 // ------------------------- QUICK SUGGESTION CHIPS -------------------------
-const QUICK_PROMPTS = [
-    { label: 'What can I plant this month?', action: 'plant' },
-    { label: 'How do I test pH?', text: 'How do I test soil pH?' },
-    { label: 'How to make compost?', text: 'How do I make compost?' },
-    { label: 'Best organic fertilizer?', text: 'What organic fertilizer is best for sandy soil in the Philippines?' },
-    { label: 'Watering schedule', text: 'How often should I water my plants?' },
-];
+const QUICK_PROMPTS = {
+    en: [
+        { label: 'What can I plant this month?', action: 'plant' },
+        { label: 'How do I test pH?', text: 'How do I test soil pH?' },
+        { label: 'How to make compost?', text: 'How do I make compost?' },
+        { label: 'Best organic fertilizer?', text: 'What organic fertilizer is best for sandy soil in the Philippines?' },
+        { label: 'Watering schedule', text: 'How often should I water my plants?' },
+    ],
+    tl: [
+        { label: 'Ano ang puwedeng itanim ngayong buwan?', action: 'plant' },
+        { label: 'Paano i-test ang pH?', text: 'Paano ko susuriin ang pH ng lupa?' },
+        { label: 'Paano gumawa ng compost?', text: 'Paano gumawa ng compost?' },
+        { label: 'Best organic fertilizer?', text: 'Ano ang pinakamagandang organic fertilizer para sa buhangin na lupa sa Pilipinas?' },
+        { label: 'Iskedyul ng pagdidilig', text: 'Gaano kadalas akong magdidilig ng halaman?' },
+    ],
+};
+
+const UI_TEXT = {
+    en: {
+        welcomeTitle: "Mabuhay! I'm SoilMate.",
+        welcomeText: "Your AI agriculture assistant for Philippine soil and crops. Ask me a question, explore this month's planting guide, or upload a soil photo for analysis.",
+        inputPlaceholder: 'Ask anything about soil or crops...',
+        plantNow: 'What can I plant now?',
+        photo: 'Photo',
+        send: 'Send',
+        switchLabel: 'Switch to Filipino',
+    },
+    tl: {
+        welcomeTitle: 'Mabuhay! Ako si SoilMate.',
+        welcomeText: 'Ang iyong AI agriculture assistant para sa lupa at pananim sa Pilipinas. Magtanong, tingnan ang planting guide ngayong buwan, o mag-upload ng larawan ng lupa para masuri.',
+        inputPlaceholder: 'Magtanong tungkol sa lupa o pananim...',
+        plantNow: 'Ano ang puwedeng itanim ngayon?',
+        photo: 'Larawan',
+        send: 'Ipadala',
+        switchLabel: 'Switch to English',
+    },
+};
 
 function renderQuickPrompts() {
     const wrap = document.getElementById('suggestionChips');
     if (!wrap) return;
 
     wrap.innerHTML = '';
-    QUICK_PROMPTS.forEach(prompt => {
+    QUICK_PROMPTS[chatLanguage].forEach(prompt => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'text-xs md:text-sm whitespace-nowrap flex-shrink-0 bg-slate-100 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 px-3 py-1.5 rounded-full transition dark:bg-slate-800 dark:hover:bg-emerald-900/40 dark:border-slate-700 dark:hover:border-emerald-700 dark:text-slate-300 dark:hover:text-emerald-200';
@@ -545,7 +706,34 @@ function renderQuickPrompts() {
     });
 }
 
-renderQuickPrompts();
+function applyLanguage() {
+    const text = UI_TEXT[chatLanguage];
+    document.documentElement.lang = chatLanguage === 'tl' ? 'fil' : 'en';
+
+    if (langToggleBtn) {
+        langToggleBtn.textContent = chatLanguage === 'tl' ? 'TL' : 'EN';
+        langToggleBtn.setAttribute('aria-label', text.switchLabel);
+        langToggleBtn.title = text.switchLabel;
+    }
+    if (welcomeTitle) welcomeTitle.textContent = text.welcomeTitle;
+    if (welcomeText) welcomeText.textContent = text.welcomeText;
+    if (userInput) userInput.placeholder = text.inputPlaceholder;
+    if (plantNowBtn) plantNowBtn.textContent = text.plantNow;
+    if (photoBtnLabel) photoBtnLabel.textContent = text.photo;
+    if (sendBtnLabel) sendBtnLabel.textContent = text.send;
+
+    renderQuickPrompts();
+}
+
+if (langToggleBtn) {
+    langToggleBtn.addEventListener('click', () => {
+        chatLanguage = chatLanguage === 'tl' ? 'en' : 'tl';
+        localStorage.setItem(LANG_KEY, chatLanguage);
+        applyLanguage();
+    });
+}
+
+applyLanguage();
 
 // ------------------------- SCAN & CHAT HISTORY -------------------------
 const scanHistoryEl = document.getElementById('scanHistory');
@@ -840,6 +1028,19 @@ const headerLogoutBtn = document.getElementById('headerLogoutBtn');
 const accountAvatar = document.getElementById('accountAvatar');
 const accountName = document.getElementById('accountName');
 const accountState = document.getElementById('accountState');
+const accountBtn = document.getElementById('accountBtn');
+const profileModal = document.getElementById('profileModal');
+const profileForm = document.getElementById('profileForm');
+const profileAvatarPreview = document.getElementById('profileAvatarPreview');
+const profileAvatarInput = document.getElementById('profileAvatarInput');
+const profileAvatarBtn = document.getElementById('profileAvatarBtn');
+const profileAvatarRemoveBtn = document.getElementById('profileAvatarRemoveBtn');
+const profileUsername = document.getElementById('profileUsername');
+const profileEmail = document.getElementById('profileEmail');
+const profileMessage = document.getElementById('profileMessage');
+const profileSaveBtn = document.getElementById('profileSaveBtn');
+const profileCloseBtn = document.getElementById('profileCloseBtn');
+const profileCancelBtn = document.getElementById('profileCancelBtn');
 
 const GUEST_KEY = 'soilmate_guest';
 const TAB_ACTIVE = 'flex-1 text-sm font-semibold py-2 rounded-lg transition bg-white text-emerald-800 shadow-xs dark:bg-slate-700 dark:text-emerald-200';
@@ -881,25 +1082,191 @@ function hideGate() {
 // Signed-in state lives in the chat header only, never in the sidebar.
 let isAuthenticatedUser = false;
 
-function updateAccountUI(authenticated, username) {
+// Avatar currently shown for the account (null means "use the initial").
+let currentAvatarUrl = null;
+let pendingAvatarFile = null;
+let pendingAvatarPreviewUrl = null;
+let avatarRemovalRequested = false;
+
+const AVATAR_AUTH_CLASS = 'w-9 h-9 rounded-full overflow-hidden bg-emerald-700 text-white flex items-center justify-center font-bold text-sm dark:bg-emerald-600';
+const AVATAR_GUEST_CLASS = 'w-9 h-9 rounded-full overflow-hidden bg-emerald-100 text-emerald-800 border border-emerald-200/70 flex items-center justify-center font-bold text-sm dark:bg-emerald-900 dark:text-emerald-300 dark:border-emerald-800';
+
+function renderAvatarInto(element, avatarUrl, name) {
+    if (avatarUrl) {
+        element.innerHTML = `<img src="${escapeHtml(avatarUrl)}" alt="" class="w-full h-full object-cover">`;
+    } else {
+        element.textContent = (name || '?').charAt(0).toUpperCase();
+    }
+}
+
+function updateAccountUI(authenticated, username, avatar) {
     isAuthenticatedUser = !!authenticated;
+    currentAvatarUrl = avatar || null;
     if (authenticated) {
         const name = username || '';
         accountName.textContent = name;
-        accountAvatar.textContent = (name.charAt(0) || '?').toUpperCase();
-        accountAvatar.className = 'w-9 h-9 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold text-sm dark:bg-emerald-600';
+        accountAvatar.className = AVATAR_AUTH_CLASS;
+        renderAvatarInto(accountAvatar, currentAvatarUrl, name);
         accountState.textContent = 'Signed in';
         headerLoginBtn.classList.add('hidden');
         headerLogoutBtn.classList.remove('hidden');
     } else {
         accountName.textContent = 'Guest';
-        accountAvatar.textContent = 'G';
-        accountAvatar.className = 'w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm dark:bg-emerald-900 dark:text-emerald-300';
+        accountAvatar.className = AVATAR_GUEST_CLASS;
+        renderAvatarInto(accountAvatar, null, 'Guest');
         accountState.textContent = 'Not signed in';
         headerLoginBtn.classList.remove('hidden');
         headerLogoutBtn.classList.add('hidden');
     }
 }
+
+// ------------------------- EDIT PROFILE -------------------------
+function setProfileMessage(text, isError = true) {
+    profileMessage.textContent = text || '';
+    profileMessage.className = text
+        ? (isError
+            ? 'text-xs text-rose-600 min-h-[1rem] dark:text-rose-400'
+            : 'text-xs text-emerald-700 min-h-[1rem] dark:text-emerald-300')
+        : 'text-xs text-rose-600 min-h-[1rem] dark:text-rose-400';
+}
+
+function renderProfileAvatar() {
+    let url = currentAvatarUrl;
+    if (pendingAvatarFile) {
+        url = pendingAvatarPreviewUrl;
+    } else if (avatarRemovalRequested) {
+        url = null;
+    }
+    renderAvatarInto(profileAvatarPreview, url, profileUsername.value.trim());
+}
+
+function closeProfile() {
+    profileModal.classList.add('hidden');
+    if (pendingAvatarPreviewUrl) {
+        URL.revokeObjectURL(pendingAvatarPreviewUrl);
+        pendingAvatarPreviewUrl = null;
+    }
+    pendingAvatarFile = null;
+    avatarRemovalRequested = false;
+    profileAvatarInput.value = '';
+}
+
+async function openProfile() {
+    if (!isAuthenticatedUser) {
+        showGate('login');
+        return;
+    }
+
+    pendingAvatarFile = null;
+    avatarRemovalRequested = false;
+    profileAvatarInput.value = '';
+    setProfileMessage('');
+
+    profileModal.classList.remove('hidden');
+    profileUsername.value = accountName.textContent === 'Guest' ? '' : accountName.textContent;
+    profileEmail.value = '';
+    renderProfileAvatar();
+
+    try {
+        const res = await fetch('/api/profile');
+        const data = await res.json();
+        if (!res.ok) {
+            setProfileMessage(data.error || 'Could not load your profile.');
+            return;
+        }
+        profileUsername.value = data.username || '';
+        profileEmail.value = data.email || '';
+        currentAvatarUrl = data.avatar || null;
+        renderProfileAvatar();
+    } catch (err) {
+        setProfileMessage('Could not reach the server. Please try again.');
+    }
+}
+
+profileForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const username = profileUsername.value.trim();
+    const email = profileEmail.value.trim();
+    if (!username || !email) {
+        setProfileMessage('Username and email are required.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('email', email);
+    if (pendingAvatarFile) formData.append('avatar', pendingAvatarFile);
+    if (avatarRemovalRequested) formData.append('remove_avatar', '1');
+
+    profileSaveBtn.disabled = true;
+    setProfileMessage('Saving...', false);
+
+    try {
+        const res = await fetch('/api/profile', { method: 'POST', body: formData });
+        let data = {};
+        try { data = await res.json(); } catch (err) { /* empty body */ }
+
+        if (!res.ok) {
+            setProfileMessage(data.error || 'Could not save your profile.');
+            return;
+        }
+
+        currentAvatarUrl = data.avatar || null;
+        updateAccountUI(true, data.username, data.avatar);
+        closeProfile();
+        appendMessage('bot', `Profile updated. Hello, **${data.username}**!`);
+    } catch (err) {
+        setProfileMessage('Could not reach the server. Please try again.');
+    } finally {
+        profileSaveBtn.disabled = false;
+    }
+});
+
+profileAvatarBtn.addEventListener('click', () => profileAvatarInput.click());
+
+profileAvatarInput.addEventListener('change', (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        setProfileMessage('Please choose an image file.');
+        profileAvatarInput.value = '';
+        return;
+    }
+    if (file.size > 6 * 1024 * 1024) {
+        setProfileMessage('Avatar image must be smaller than 6 MB.');
+        profileAvatarInput.value = '';
+        return;
+    }
+
+    if (pendingAvatarPreviewUrl) URL.revokeObjectURL(pendingAvatarPreviewUrl);
+    pendingAvatarFile = file;
+    pendingAvatarPreviewUrl = URL.createObjectURL(file);
+    avatarRemovalRequested = false;
+    setProfileMessage('');
+    renderProfileAvatar();
+    profileAvatarInput.value = '';
+});
+
+profileAvatarRemoveBtn.addEventListener('click', () => {
+    pendingAvatarFile = null;
+    if (pendingAvatarPreviewUrl) {
+        URL.revokeObjectURL(pendingAvatarPreviewUrl);
+        pendingAvatarPreviewUrl = null;
+    }
+    avatarRemovalRequested = true;
+    setProfileMessage('');
+    renderProfileAvatar();
+});
+
+accountBtn.addEventListener('click', openProfile);
+profileCloseBtn.addEventListener('click', closeProfile);
+profileCancelBtn.addEventListener('click', closeProfile);
+profileUsername.addEventListener('input', renderProfileAvatar);
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !profileModal.classList.contains('hidden')) closeProfile();
+});
 
 async function postJson(url, payload) {
     const res = await fetch(url, {
@@ -969,7 +1336,7 @@ async function onAuthSuccess(data) {
     gateEmail.value = '';
     gatePassword.value = '';
     hideGate();
-    updateAccountUI(true, data.username);
+    updateAccountUI(true, data.username, data.avatar);
     await refreshAfterAuth();
     appendMessage('bot', `Welcome, **${data.username}**! Your scans and chats are saved to this account.`);
 }
@@ -1014,17 +1381,19 @@ headerLogoutBtn.addEventListener('click', logout);
 (async function init() {
     let authenticated = false;
     let username = null;
+    let avatar = null;
 
     try {
         const res = await fetch('/api/me');
         const data = await res.json();
         authenticated = !!data.authenticated;
         username = data.username;
+        avatar = data.avatar;
     } catch (err) {
         console.error('Could not load account:', err);
     }
 
-    updateAccountUI(authenticated, username);
+    updateAccountUI(authenticated, username, avatar);
 
     if (authenticated || localStorage.getItem(GUEST_KEY) === '1') {
         hideGate();

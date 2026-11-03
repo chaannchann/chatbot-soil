@@ -151,8 +151,13 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    avatar VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Editable profile picture. Stores a filename served from /avatars/<file>;
+-- NULL means the UI falls back to the username initial.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar VARCHAR(255);
 
 -- Link history rows to accounts. Nullable: anonymous sessions stay valid.
 DO $$

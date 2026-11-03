@@ -25,6 +25,14 @@ import unicodedata
 from difflib import SequenceMatcher
 
 KB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "knowledge_base.json")
+TL_KB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "knowledge_base_tl.json")
+
+DEFAULT_SUGGESTIONS = [
+    "What can I plant this month?",
+    "How do I test soil pH?",
+    "How do I make compost?",
+]
+EMPTY_REPLY = "Ask me anything about soil, compost, fertilizers, or what to plant in the Philippines."
 
 # Very common English/Filipino filler words that carry no topic signal.
 STOPWORDS = {
@@ -39,9 +47,35 @@ STOPWORDS = {
     "not", "no", "yes", "very", "too", "much", "many", "more", "most",
     "some", "any", "all", "just", "also", "please", "help", "need", "want",
     "give", "get", "make", "tell", "know", "like", "recipe", "cook", "cooking", "dish",
-    # Filipino particles
-    "ang", "ng", "sa", "na", "po", "ba", "ko", "ako", "akin", "mo", "iyo",
-    "mga", "yung", "ito", "iyan", "si", "ni", "kay", "para", "lang", "ba",
+    # Filipino function words, question words and particles
+    "ang", "ng", "mga", "sa", "na", "po", "ba", "ko", "ako", "akin", "mo", "iyo",
+    "yung", "yun", "yon", "yong", "ito", "iyan", "iyon", "si", "ni", "kay",
+    "para", "lang", "ano", "paano", "papaano", "saan", "kailan", "bakit",
+    "sino", "ilan", "gaano", "magkano", "pwede", "puwede", "gusto",
+    "kailangan", "hindi", "wala", "meron", "mayroon", "naman", "din", "rin",
+    "daw", "raw", "kasi", "pero", "kung", "kapag", "dapat", "maaari",
+    "maging", "dito", "doon", "tayo", "kami", "kayo", "sila", "namin",
+    "natin", "ninyo", "niyo", "nila", "niya", "siya", "ka", "oo", "opo",
+}
+
+# Words that are common across many intents and should never win a match by
+# themselves. The Filipino entries keep generic words like "lupa" (soil) from
+# matching every soil intent.
+FILIPINO_MARKERS = {
+    "ang", "ng", "mga", "sa", "na", "po", "ba", "ako", "ko", "mo", "siya",
+    "niya", "namin", "natin", "ninyo", "niyo", "nila", "ito", "iyan", "iyon",
+    "yung", "yun", "yon", "ano", "paano", "papaano", "saan", "kailan",
+    "bakit", "sino", "ilan", "gaano", "magkano", "pwede", "puwede", "gusto",
+    "kailangan", "hindi", "wala", "meron", "mayroon", "salamat", "mabuhay",
+    "kumusta", "kamusta", "musta", "naman", "lang", "din", "rin", "daw",
+    "raw", "kasi", "pero", "kung", "kapag", "dapat", "maaari", "maging",
+    "tulong", "magandang", "umaga", "tanghali", "hapon", "gabi",
+    "gawin", "tanim", "magtanim", "itanim", "taniman", "pataba", "abono",
+    "lupa", "tubig", "dilig", "dahon", "peste", "sakit", "panahon", "ulan",
+    "araw", "init", "bukid", "hardin", "halaman", "gulay", "ani", "anihin",
+    "punla", "punlaan", "bunga", "ugat", "buhangin", "buhanging", "malagkit",
+    "mabuhangin", "itim", "pula", "dilaw", "paso", "sobra", "kulang", "sapat",
+    "maputla", "naninilaw", "nalalanta", "tumutubo",
 }
 
 # Words that appear across many intents and therefore must not carry a match
@@ -53,12 +87,16 @@ GENERIC_TERMS = {
     "stop", "prevent", "avoid", "best", "good", "bad", "work", "happen", "start",
     "begin", "keep", "put", "mix", "control", "kill", "problem", "issue", "way",
     "time", "soil", "thing", "lot", "kind", "type", "level",
+    # Filipino equivalents
+    "lupa", "halaman", "gulay", "tanim", "magtanim", "itanim", "gawin",
+    "paraan", "paggawa", "uri", "klase", "mapapabuti", "pagbutihin",
+    "marami", "kaunti", "sobra", "kulang", "sapat",
 }
 
 
 # Bare colour words are too ambiguous to treat as a soil mention on their own
 # ("leaves turning yellow" is a nutrient problem, not Yellow Soil).
-WEAK_SOIL_WORDS = {"black", "dark", "red", "yellow"}
+WEAK_SOIL_WORDS = {"black", "dark", "red", "yellow", "itim", "pula", "dilaw"}
 
 
 def normalize(text):
@@ -71,6 +109,16 @@ def normalize(text):
     text = re.sub(r"[^a-z0-9\s]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
+
+
+def detect_language(text):
+    """Return ``"tl"`` when the message uses Filipino function words, else ``"en"``.
+
+    Taglish ("paano mag compost") counts as Filipino because the question
+    words and particles are Filipino. Technical English terms are fine.
+    """
+    tokens = normalize(text).split()
+    return "tl" if any(tok in FILIPINO_MARKERS for tok in tokens) else "en"
 
 
 def stem(token):
@@ -108,13 +156,65 @@ class ChatBot:
 
         self.intents = self.kb["intents"]
         self.fallback_text = self.kb.get("fallback", "Sorry, I didn't understand that.")
-        self.soil_aliases = self.kb.get("soil_aliases", {})
+        self.soil_aliases = {name: list(values) for name, values in self.kb.get("soil_aliases", {}).items()}
         self.soil_to_intent = self.kb.get("soil_to_intent", {})
+
+        # Filipino defaults; replaced when knowledge_base_tl.json is present.
+        self.fallback_tl = self.fallback_text
+        self.fallback_suggestions_tl = list(DEFAULT_SUGGESTIONS)
+        self.empty_tl = {"reply": EMPTY_REPLY, "suggestions": list(DEFAULT_SUGGESTIONS)}
 
         # Session state: session_id -> {"last_intent": str, "last_soil": str}
         self._sessions = {}
 
+        self._load_translations()
         self._build_index()
+
+    def _load_translations(self):
+        """Merge knowledge_base_tl.json into the English intents, if it exists.
+
+        Keeping the Filipino content in its own file makes the English
+        knowledge base easy to diff and lets a new language be added without
+        touching every intent.
+        """
+        if not os.path.exists(TL_KB_PATH):
+            return
+
+        with open(TL_KB_PATH, "r", encoding="utf-8") as fh:
+            tl = json.load(fh)
+
+        self.fallback_tl = tl.get("fallback", self.fallback_text)
+        self.fallback_suggestions_tl = tl.get("fallback_suggestions", list(DEFAULT_SUGGESTIONS))
+        empty = tl.get("empty")
+        if empty:
+            self.empty_tl = {
+                "reply": empty.get("reply", EMPTY_REPLY),
+                "suggestions": empty.get("suggestions", list(DEFAULT_SUGGESTIONS)),
+            }
+
+        field_map = {
+            "title": "title_tl",
+            "patterns": "patterns_tl",
+            "keywords": "keywords_tl",
+            "answer": "answer_tl",
+            "answer_by_soil": "answer_by_soil_tl",
+            "follow_ups": "follow_ups_tl",
+        }
+        translations = tl.get("intents", {})
+        for intent in self.intents:
+            data = translations.get(intent["id"])
+            if not data:
+                continue
+            for source, target in field_map.items():
+                if source in data:
+                    intent[target] = data[source]
+
+        # Extra Filipino soil names ("pulang lupa", "buhangin", ...).
+        for canonical, aliases in tl.get("soil_aliases", {}).items():
+            target = self.soil_aliases.setdefault(canonical, [])
+            for alias in aliases:
+                if alias not in target:
+                    target.append(alias)
 
     # ------------------------------------------------------------------ index
     def _build_index(self):
@@ -124,7 +224,9 @@ class ChatBot:
 
         raw_docs = []
         for intent in self.intents:
-            for pattern in intent.get("patterns", []):
+            # Merge English and Filipino phrasings, dropping duplicates.
+            patterns = list(dict.fromkeys(intent.get("patterns", []) + intent.get("patterns_tl", [])))
+            for pattern in patterns:
                 tokens = tokenize(pattern)
                 if tokens:
                     raw_docs.append((intent, tokens))
@@ -145,11 +247,14 @@ class ChatBot:
             vector = self._vectorize(tokens)
             self.documents.append((intent, set(tokens), vector))
 
-        # Pre-tokenize keyword sets for the short-query bonus.
-        self.intent_keywords = {
-            intent["id"]: [tokenize(kw) for kw in intent.get("keywords", [])]
-            for intent in self.intents
-        }
+        # Pre-tokenize keyword sets for the short-query bonus. Deduplicate so
+        # a word listed in both languages does not earn a double bonus.
+        self.intent_keywords = {}
+        for intent in self.intents:
+            keywords = list(dict.fromkeys(
+                intent.get("keywords", []) + intent.get("keywords_tl", [])
+            ))
+            self.intent_keywords[intent["id"]] = [tokenize(kw) for kw in keywords]
 
     def _vectorize(self, tokens):
         """Raw-count TF weighted by IDF, L2-normalized."""
@@ -284,7 +389,8 @@ class ChatBot:
             return None
         best = None
         for intent in self.intents:
-            for pattern in intent.get("patterns", []):
+            patterns = intent.get("patterns", []) + intent.get("patterns_tl", [])
+            for pattern in patterns:
                 ratio = SequenceMatcher(None, target, normalize(pattern)).ratio()
                 if ratio >= min_ratio and (best is None or ratio > best[1]):
                     best = (intent, ratio)
@@ -293,8 +399,17 @@ class ChatBot:
         return (best[0], best[1], "fuzzy")
 
     # ------------------------------------------------------------- responders
-    def _resolve_answer(self, intent, soil):
-        """Pick a soil-specific answer variant when one exists."""
+    def _resolve_answer(self, intent, soil, language="en"):
+        """Pick a soil-specific answer variant in the requested language."""
+        if language == "tl":
+            by_soil = intent.get("answer_by_soil_tl")
+            if by_soil and soil and soil in by_soil:
+                return by_soil[soil]
+            answer = intent.get("answer_tl")
+            if answer:
+                return answer
+
+        # English, or a Filipino answer that has not been translated yet.
         by_soil = intent.get("answer_by_soil")
         if by_soil and soil and soil in by_soil:
             return by_soil[soil]
@@ -307,16 +422,24 @@ class ChatBot:
             self._sessions.clear()
         return self._sessions.setdefault(session_id, {})
 
-    def respond(self, message, session_id=None, known_soil=None):
+    def respond(self, message, session_id=None, known_soil=None, preferred_language=None):
         """Produce a reply dict for one user message.
 
         Args:
             message: raw user text.
             session_id: stable client-side id, used to remember context.
             known_soil: last soil detected from an uploaded image, if any.
+            preferred_language: optional UI preference, ``"en"`` or ``"tl"``.
+                A message written in Filipino always gets a Filipino answer;
+                otherwise this preference decides.
         """
         message = (message or "").strip()
         session = self._session(session_id)
+
+        # A message written in Filipino wins even when the UI is in English.
+        language = detect_language(message)
+        if language != "tl" and preferred_language in {"en", "tl"}:
+            language = preferred_language
 
         # A soil mentioned in the text always wins over a stale image result.
         soil_in_text = self.detect_soil(message)
@@ -327,13 +450,25 @@ class ChatBot:
         soil = session.get("last_soil")
 
         if not message:
+            if language == "tl":
+                empty = self.empty_tl
+                return {
+                    "reply": empty.get("reply", EMPTY_REPLY),
+                    "intent": "empty",
+                    "confidence": 0.0,
+                    "suggestions": empty.get("suggestions", self.fallback_suggestions_tl),
+                    "soil_type": soil,
+                    "action": None,
+                    "language": language,
+                }
             return {
-                "reply": "Ask me anything about soil, compost, fertilizers, or what to plant in the Philippines.",
+                "reply": EMPTY_REPLY,
                 "intent": "empty",
                 "confidence": 0.0,
-                "suggestions": ["What can I plant this month?", "How do I test soil pH?", "How do I make compost?"],
+                "suggestions": list(DEFAULT_SUGGESTIONS),
                 "soil_type": soil,
                 "action": None,
+                "language": language,
             }
 
         ranked = self.rank(message)
@@ -347,23 +482,36 @@ class ChatBot:
             best_score = matched if matched is not None else max(best_score, 0.9)
 
         if best_intent is None or best_score < self.threshold:
+            if language == "tl":
+                return {
+                    "reply": self.fallback_tl,
+                    "intent": "fallback",
+                    "confidence": round(float(best_score), 3),
+                    "suggestions": list(self.fallback_suggestions_tl),
+                    "soil_type": soil,
+                    "action": None,
+                    "language": language,
+                }
             return {
                 "reply": self.fallback_text,
                 "intent": "fallback",
                 "confidence": round(float(best_score), 3),
-                "suggestions": ["What can I plant this month?", "How do I test soil pH?", "How do I make compost?"],
+                "suggestions": list(DEFAULT_SUGGESTIONS),
                 "soil_type": soil,
                 "action": None,
+                "language": language,
             }
 
         session["last_intent"] = best_intent["id"]
 
+        suggestions = best_intent.get("follow_ups_tl" if language == "tl" else "follow_ups", [])
         return {
-            "reply": self._resolve_answer(best_intent, soil),
+            "reply": self._resolve_answer(best_intent, soil, language),
             "intent": best_intent["id"],
-            "title": best_intent.get("title", ""),
+            "title": best_intent.get("title_tl" if language == "tl" else "title", ""),
             "confidence": round(float(min(best_score, 1.0)), 3),
-            "suggestions": best_intent.get("follow_ups", [])[:3],
+            "suggestions": suggestions[:3],
             "soil_type": soil,
             "action": best_intent.get("action"),
+            "language": language,
         }

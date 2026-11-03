@@ -1,9 +1,9 @@
 import os
 import json
 import uuid
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
-from PIL import Image
+from PIL import Image, ImageOps
 
 import torch
 import torch.nn as nn
@@ -30,9 +30,12 @@ from flask_bcrypt import Bcrypt
 
 from users import (
     validate_registration,
+    validate_profile,
     find_by_id,
     find_by_login,
     create_user,
+    update_profile,
+    set_avatar,
 )
 
 app = Flask(__name__)
@@ -43,6 +46,10 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax',
 )
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+AVATAR_DIR = os.path.join(app.config['UPLOAD_FOLDER'], 'avatars')
+AVATAR_SIZE = 256
+os.makedirs(AVATAR_DIR, exist_ok=True)
 
 bcrypt = Bcrypt(app)
 
@@ -69,6 +76,38 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'bmp'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+# ----------------- AVATARS -----------------
+def avatar_url(filename):
+    """Public URL for a stored avatar, or None when the account has none."""
+    return f"/avatars/{filename}" if filename else None
+
+
+def save_avatar(upload):
+    """Center-crop the upload to a square, shrink it, and store it as JPEG."""
+    image = Image.open(upload.stream)
+    image = ImageOps.exif_transpose(image).convert('RGB')
+
+    width, height = image.size
+    side = min(width, height)
+    left = (width - side) // 2
+    top = (height - side) // 2
+    image = image.crop((left, top, left + side, top + side))
+    image = image.resize((AVATAR_SIZE, AVATAR_SIZE), Image.LANCZOS)
+
+    name = f"{uuid.uuid4().hex}.jpg"
+    image.save(os.path.join(AVATAR_DIR, name), 'JPEG', quality=88, optimize=True)
+    return name
+
+
+def remove_avatar_file(filename):
+    if not filename:
+        return
+    try:
+        os.remove(os.path.join(AVATAR_DIR, os.path.basename(filename)))
+    except OSError:
+        pass  # already gone
 
 
 def soil_details(soil_name):
@@ -197,6 +236,7 @@ def register():
         'authenticated': True,
         'username': user.username,
         'email': user.email,
+        'avatar': avatar_url(user.avatar),
     })
 
 
@@ -219,6 +259,7 @@ def login():
         'authenticated': True,
         'username': user.username,
         'email': user.email,
+        'avatar': avatar_url(user.avatar),
     })
 
 
@@ -235,8 +276,75 @@ def me():
             'authenticated': True,
             'username': current_user.username,
             'email': current_user.email,
+            'avatar': avatar_url(current_user.avatar),
         })
     return jsonify({'authenticated': False})
+
+
+# ----------------- PROFILE -----------------
+@app.route('/avatars/<path:filename>')
+def avatar_file(filename):
+    return send_from_directory(AVATAR_DIR, filename, max_age=3600)
+
+
+@app.route('/api/profile', methods=['GET', 'POST'])
+def profile():
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Please log in first.'}), 401
+
+    if request.method == 'GET':
+        return jsonify({
+            'username': current_user.username,
+            'email': current_user.email,
+            'avatar': avatar_url(current_user.avatar),
+        })
+
+    username = (request.form.get('username') or '').strip()
+    email = (request.form.get('email') or '').strip().lower()
+
+    error = validate_profile(username, email)
+    if error:
+        return jsonify({'error': error}), 400
+
+    upload = request.files.get('avatar')
+    remove_avatar = (request.form.get('remove_avatar') or '').lower() in {'1', 'true', 'yes'}
+
+    if upload and upload.filename and not allowed_file(upload.filename):
+        return jsonify({'error': 'Avatar must be a PNG, JPG, WEBP, or BMP image.'}), 400
+    if upload and upload.filename and request.content_length and request.content_length > 6 * 1024 * 1024:
+        return jsonify({'error': 'Avatar image must be smaller than 6 MB.'}), 400
+
+    new_avatar = None
+    if upload and upload.filename:
+        try:
+            new_avatar = save_avatar(upload)
+        except Exception:
+            return jsonify({'error': 'Could not read that image. Please try another one.'}), 400
+
+    old_avatar = current_user.avatar
+
+    try:
+        user = update_profile(current_user.numeric_id, username, email)
+    except ValueError as exc:
+        remove_avatar_file(new_avatar)
+        return jsonify({'error': str(exc)}), 409
+
+    avatar_changed = False
+    if new_avatar:
+        user = set_avatar(current_user.numeric_id, new_avatar)
+        avatar_changed = True
+    elif remove_avatar and old_avatar:
+        user = set_avatar(current_user.numeric_id, None)
+        avatar_changed = True
+
+    if avatar_changed and old_avatar != (user.avatar if user else None):
+        remove_avatar_file(old_avatar)
+
+    return jsonify({
+        'username': user.username,
+        'email': user.email,
+        'avatar': avatar_url(user.avatar),
+    })
 
 
 @app.route('/api/chat', methods=['POST'])
@@ -246,19 +354,33 @@ def chat():
     session_id = data.get('session_id')
     known_soil = data.get('soil_type')
 
-    result = bot.respond(message, session_id=session_id, known_soil=known_soil)
+    preferred_language = (data.get('lang') or data.get('language') or '').lower()
+    result = bot.respond(
+        message,
+        session_id=session_id,
+        known_soil=known_soil,
+        preferred_language=preferred_language or None,
+    )
 
     if result.get('action') == 'plant_now':
+        language = result.get('language', 'en')
         try:
-            planting_data = plant_now(result.get('soil_type'))
-            result['reply'] = format_planting_reply(planting_data)
+            planting_data = plant_now(result.get('soil_type'), language=language)
+            result['reply'] = format_planting_reply(planting_data, language=language)
             result['planting'] = planting_data
         except Exception:
-            result['reply'] = (
-                "I couldn't reach the crop calendar just now. "
-                "Please try again in a moment, or use the "
-                "*What can I plant this month?* button in the sidebar."
-            )
+            if language == 'tl':
+                result['reply'] = (
+                    "Hindi ko maabot ang crop calendar ngayon. "
+                    "Subukan muli sa ilang sandali, o gamitin ang "
+                    "*Ano ang puwedeng itanim ngayong buwan?* na button sa sidebar."
+                )
+            else:
+                result['reply'] = (
+                    "I couldn't reach the crop calendar just now. "
+                    "Please try again in a moment, or use the "
+                    "*What can I plant this month?* button in the sidebar."
+                )
 
     user_id = current_user_id()
     if user_id is not None:
@@ -277,11 +399,13 @@ def plant_now_endpoint():
     if request.method == 'POST':
         payload = request.get_json(silent=True) or {}
         soil = payload.get('soil_type')
+        language = payload.get('lang') or payload.get('language') or 'en'
     else:
         soil = request.args.get('soil')
+        language = request.args.get('lang') or request.args.get('language') or 'en'
 
     try:
-        return jsonify(plant_now(soil or None))
+        return jsonify(plant_now(soil or None, language=language))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

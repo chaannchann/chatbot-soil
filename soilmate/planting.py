@@ -16,6 +16,15 @@ MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
 ]
+MONTH_NAMES_TL = [
+    "Enero", "Pebrero", "Marso", "Abril", "Mayo", "Hunyo",
+    "Hulyo", "Agosto", "Setyembre", "Oktubre", "Nobyembre", "Disyembre",
+]
+SOIL_NAMES_TL = {
+    "Black Soil": "Itim na Lupa",
+    "Red Soil": "Pulang Lupa",
+    "Yellow Soil": "Dilaw na Lupa",
+}
 
 
 def ph_now():
@@ -23,8 +32,19 @@ def ph_now():
     return datetime.now(PH_TZ)
 
 
-def season_for(month):
+def _language(value):
+    return "tl" if value == "tl" else "en"
+
+
+def season_for(month, language="en"):
     """Return the Philippine season label for a month number (1-12)."""
+    if _language(language) == "tl":
+        if 6 <= month <= 11:
+            return "Tag-ulan (Habagat)"
+        if month in (12, 1, 2):
+            return "Malamig at Tuyong Panahon (Amihan)"
+        return "Mainit na Tag-araw (Summer)"
+
     if 6 <= month <= 11:
         return "Wet Season (Habagat)"
     if month in (12, 1, 2):
@@ -32,7 +52,26 @@ def season_for(month):
     return "Hot Dry Season (Summer)"
 
 
-def season_tip(month):
+def season_tip(month, language="en"):
+    if _language(language) == "tl":
+        if 6 <= month <= 11:
+            return (
+                "Tag-ulan ngayon — itaas ang bed, linisin ang drainage, at "
+                "bantayan ang fungal disease. Pinakamaganda ngayon ang mga "
+                "pananim na mahilig sa tubig at root crops."
+            )
+        if month in (12, 1, 2):
+            return (
+                "Ito ang pinakamagandang buwan para sa gulay — malamig at tuyo, "
+                "perpekto para sa dahon-gulay at namumungang pananim tulad ng "
+                "pechay, ampalaya, at talong."
+            )
+        return (
+            "Ito ang pinakamainit na bahagi ng taon — mag-mulch nang makapal, "
+            "magdilig nang malalim sa madaling umaga, at piliin ang mga pananim "
+            "na matibay sa tagtuyot."
+        )
+
     if 6 <= month <= 11:
         return (
             "It's the rainy season — raise your beds, keep drainage clear, and "
@@ -84,58 +123,100 @@ def crops_for_month(month, soil=None):
         return [dict(row) for row in cur.fetchall()]
 
 
-def plant_now(soil=None):
+def plant_now(soil=None, language="en"):
     """Build the full 'what can I plant now' payload for the current month."""
     now = ph_now()
     month = now.month
+    lang = _language(language)
+    month_names = MONTH_NAMES_TL if lang == "tl" else MONTH_NAMES
 
     canonical_soil = canonical_name(soil) or soil
     crops = crops_for_month(month, canonical_soil)
     filtered_by_soil = bool(canonical_soil)
     note = None
 
+    soil_name = display_name_for(canonical_soil) if canonical_soil else None
+    if lang == "tl" and canonical_soil:
+        soil_name = SOIL_NAMES_TL.get(canonical_soil, soil_name)
+
     if not crops and canonical_soil:
         # Nothing mapped to that soil this month - still be useful.
         crops = crops_for_month(month, None)
         filtered_by_soil = False
-        note = (
-            f"No crops in our database are mapped to {display_name_for(canonical_soil)} for "
-            f"{MONTH_NAMES[month - 1]}, so here are all crops suited to this month."
-        )
+        if lang == "tl":
+            note = (
+                f"Walang pananim sa database na nakatugma sa {soil_name} para sa "
+                f"{month_names[month - 1]}, kaya narito ang lahat ng pananim na "
+                "bagay ngayong buwan."
+            )
+        else:
+            note = (
+                f"No crops in our database are mapped to {soil_name} for "
+                f"{month_names[month - 1]}, so here are all crops suited to this month."
+            )
 
     return {
         "month": month,
-        "month_name": MONTH_NAMES[month - 1],
+        "month_name": month_names[month - 1],
         "year": now.year,
-        "season": season_for(month),
-        "season_tip": season_tip(month),
-        "soil_type": display_name_for(canonical_soil) if canonical_soil else None,
+        "season": season_for(month, lang),
+        "season_tip": season_tip(month, lang),
+        "soil_type": soil_name,
         "filtered_by_soil": filtered_by_soil,
         "crops": crops,
         "note": note,
         "count": len(crops),
+        "language": lang,
     }
 
 
-def _crop_line(crop):
+def _crop_line(crop, language="en"):
     days = ""
     if crop.get("harvest_days_min") and crop.get("harvest_days_max"):
-        days = f" — harvest in {crop['harvest_days_min']}\u2013{crop['harvest_days_max']} days"
+        if _language(language) == "tl":
+            days = f" — anihin sa {crop['harvest_days_min']}\u2013{crop['harvest_days_max']} araw"
+        else:
+            days = f" — harvest in {crop['harvest_days_min']}\u2013{crop['harvest_days_max']} days"
     local = f" ({crop['local_name']})" if crop.get("local_name") else ""
     return f"- **{crop['common_name']}**{local}{days}"
 
 
-def format_planting_reply(result):
+def format_planting_reply(result, language=None):
     """Render a plant_now() result as a chat-friendly markdown message."""
+    lang = _language(language or result.get("language", "en"))
     month_name = result["month_name"]
     season = result["season"]
 
     if not result["crops"]:
+        if lang == "tl":
+            return (
+                f"Wala pa akong nakalista na pananim para sa **{month_name}** ({season}).\n\n"
+                "Subukang mag-upload ng larawan ng lupa at sasabihin ko kung anong "
+                "klase ng pananim ang kayang suportahan nito. Mas marami pang "
+                "pananim ang idadagdag sa calendar."
+            )
         return (
             f"I don't have crops listed for **{month_name}** ({season}) yet.\n\n"
             "Try uploading a soil photo and I'll at least tell you what your soil "
             "can support. More crops are being added to the calendar."
         )
+
+    if lang == "tl":
+        lines = [
+            f"Narito ang puwede mong itanim sa **{month_name} {result['year']}** — "
+            f"{season} sa Pilipinas:\n"
+        ]
+        if result["soil_type"] and result["filtered_by_soil"]:
+            lines.append(f"Nasala para sa iyong **{result['soil_type']}**:\n")
+        lines.extend(_crop_line(crop, lang) for crop in result["crops"])
+        if result.get("note"):
+            lines.append(f"\n_{result['note']}_")
+        lines.append(f"\n**Tip para sa season:** {result['season_tip']}")
+        lines.append(
+            "\nI-click ang *Ano ang puwedeng itanim ngayong buwan?* na chip "
+            "anumang oras para i-refresh ang listahan."
+        )
+        return "\n".join(lines)
 
     lines = [
         f"Here's what you can plant in **{month_name} {result['year']}** — "
@@ -145,7 +226,7 @@ def format_planting_reply(result):
     if result["soil_type"] and result["filtered_by_soil"]:
         lines.append(f"Filtered for your **{result['soil_type']}**:\n")
 
-    lines.extend(_crop_line(crop) for crop in result["crops"])
+    lines.extend(_crop_line(crop, lang) for crop in result["crops"])
 
     if result.get("note"):
         lines.append(f"\n_{result['note']}_")
