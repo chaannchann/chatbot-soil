@@ -158,7 +158,7 @@ soilmate/
 
  How to Run
 
-For a fresh laptop, follow `HOW_TO_SET_UP.md` in the repository root: it covers copying the untracked files, creating the database by hand in pgAdmin, and starting the app. The summary below is the same flow.
+For a fresh laptop, follow `HOW_TO_SET_UP.md` in the repository root: it covers the `.env` file, creating the database by hand in pgAdmin, and starting the app. The summary below is the same flow.
 
 1. Create the database (in pgAdmin: Databases → Create → Database…, name it `soilmate_db`):
 
@@ -192,6 +192,20 @@ For a fresh laptop, follow `HOW_TO_SET_UP.md` in the repository root: it covers 
 
  Setup Questions and Answers
 
+- **How do I set up and run this on another laptop?**
+  Follow `HOW_TO_SET_UP.md`. Create `soilmate\.env` first because it is the only file missing from a clone. Then create a virtual environment, `pip install -r requirements.txt`, create the database, run `database.sql`, run `seed.py`, and run `app.py`.
+
+- **Is the database set up manually in pgAdmin, or with terminal commands?**
+  Manually in pgAdmin. Right-click **Databases → Create → Database…**, name it `soilmate_db`, open `database.sql` in the Query Tool with the folder icon, and press F5.
+
+- **Do I have to install Python and pgAdmin as part of the setup?**
+  No. `HOW_TO_SET_UP.md` assumes Python 3.10+ and PostgreSQL with pgAdmin are already installed.
+
+- **Is `database.sql` up to date and ready to execute as-is?**
+  Yes. It was tested on an empty database: it creates all seven tables, `seed.py` then loads 10 soils and 35 crops, and `/api/chat`, `/api/plant-now`, and `/api/history` all respond. Run it once only; the starter crop and compatibility inserts have no `ON CONFLICT`, so a second run stops with duplicate key errors.
+
+- **Is `migration.sql` still needed?**
+  No. A fresh install only needs `database.sql`, and the current development database already has every table and canonical soil name. `migration.sql` is only for databases created before the planting calendar, scan/chat history, and user accounts existed.
 
  Tests
 

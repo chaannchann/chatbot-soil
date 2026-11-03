@@ -9,9 +9,7 @@ cd chatbot-soil
  
 
 
-- `soilmate\data\` → the whole folder, into `C:\projs\chatbot-soil\soilmate\data\`
-  It must contain `knowledge_base.json`, `crops.json`, `soils.json`.
-- Do not copy `.env` or `.venv`.
+The chatbot data in `soilmate\data\` comes with the clone. Only `soilmate\.env` is missing, because it holds your database password and is never committed — create it in step 4.
 
 ## 2. Install the Python packages
 
