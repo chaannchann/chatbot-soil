@@ -21,7 +21,8 @@ CLASSES = [
     "Red soil",
     "Yellow Soil",
     "soil with algae",
-    "concrete surface"
+    "concrete surface",
+    "Loam_Soil"
 ]
 
 def augment_image(img):

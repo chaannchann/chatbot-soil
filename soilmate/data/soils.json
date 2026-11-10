@@ -118,6 +118,32 @@
       "common_ph_range": "5.0 - 6.5",
       "improvement_tips": "Immediately reduce watering and aerate the topsoil by gentle tilling. Incorporate coarse sand, perlite, or organic compost to restore oxygen flow. Apply agricultural lime if moss or algae is driven by acidic damp conditions.",
       "crops": ["Rice", "Taro", "Kangkong", "Alugbati"]
+    },
+    {
+      "class_key": "Loam_Soil",
+      "name": "Loam Soil",
+      "display_name": "Loam Soil (Typical Garden Soil)",
+      "aliases": ["loam", "loamy", "garden soil", "topsoil", "common soil", "ordinary soil", "taba ng lupa"],
+      "description": "Balanced agricultural soil containing an optimal mixture of sand, silt, and clay with rich organic matter. Highly friable, moisture-retentive yet well-draining, making it the most fertile and adaptable soil for Philippine home gardening and farming.",
+      "drainage": "Moderate / Ideal",
+      "water_retention": "Moderate to High",
+      "common_ph_range": "6.0 - 7.0",
+      "improvement_tips": "Maintain fertility and soil crumb structure by dressing with organic compost or vermicast between crop cycles. Mulch with dried leaves or rice straw during the hot dry season to prevent surface drying and preserve beneficial microbes.",
+      "crops": [
+        "Bitter Gourd",
+        "Eggplant",
+        "Bok Choy / Pechay",
+        "String Beans",
+        "Tomato",
+        "Okra",
+        "Corn",
+        "Squash",
+        "Cucumber",
+        "Chili Pepper",
+        "Radish",
+        "Mustard Greens",
+        "Sweet Potato"
+      ]
     }
   ]
 }
