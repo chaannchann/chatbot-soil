@@ -34,9 +34,10 @@ Everything runs on the machine. No external AI, weather, or geocoding APIs are u
 - Chat for soil, compost, fertilizer, pest, and crop questions
 - English and Filipino (Tagalog) chat, including Taglish; use the header **EN/TL** button to switch the suggested questions and calendar labels, or just type in Filipino and the bot replies in Filipino
 - "What can I plant this month?" crop calendar
-- Recent scans and chat history restore for signed-in users
+- Unified history restores saved scans and chats for signed-in users
+- Soil scans are added to the open conversation, and reopening it restores the photo and analysis card
 - "Clear" action deletes all saved scans, chats, and uploaded scan photos for the account
-- 3-dot menu on each history row to delete a single scan
+- 3-dot menu on each history row to delete a conversation and its scan
 - Guest mode with a login prompt to start saving history
 - Edit profile from the header avatar: change username, email, and a custom avatar photo (center-cropped to 256x256) or remove it
 - Formatted chat replies and collapsible crop lists for long results

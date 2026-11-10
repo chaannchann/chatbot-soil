@@ -9,7 +9,13 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from history import _scope, _session_for_storage, delete_scan, delete_user_history  # noqa: E402
+from history import (  # noqa: E402
+    _scan_ids_from_intents,
+    _scope,
+    _session_for_storage,
+    delete_scan,
+    delete_user_history,
+)
 
 failures = []
 
@@ -48,6 +54,19 @@ check(_session_for_storage("sess-1", None) == "sess-1", "guest rows keep their s
 # Guests have no id, so the history deletion helpers must refuse to run.
 check(delete_user_history(None) == (0, 0, []), "guests must not be able to delete history")
 check(delete_scan(1, None) is None, "guests must not be able to delete a single scan")
+
+# Scan turns are linked to a conversation through "scan:<id>" intent values.
+check(
+    _scan_ids_from_intents([
+        {"intent": "scan:12"},
+        {"intent": "scan:7"},
+        {"intent": "scan:not-a-number"},
+        {"intent": "greeting"},
+        {"intent": None},
+        {},
+    ]) == [12, 7],
+    "scan ids should be parsed from scan intents only",
+)
 
 if failures:
     print(f"FAILED ({len(failures)}):")

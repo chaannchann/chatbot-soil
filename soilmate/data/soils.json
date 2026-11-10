@@ -144,6 +144,27 @@
         "Mustard Greens",
         "Sweet Potato"
       ]
+    },
+    {
+      "class_key": "Sand_Soil",
+      "name": "Sand Soil",
+      "display_name": "Sand Soil (Sandy Soil)",
+      "aliases": ["sand", "sandy", "sand soil", "pure sand", "beach sand", "buhangin"],
+      "description": "Loose, coarse-grained soil with large mineral particles. Has extremely rapid drainage, very low water retention, and leaches dissolved fertilizers rapidly, but warms up quickly and offers zero resistance to expanding root and tuber crops.",
+      "drainage": "Excessive / Very Rapid",
+      "water_retention": "Very Low",
+      "common_ph_range": "5.5 - 7.0",
+      "improvement_tips": "Incorporate generous amounts of organic matter such as well-rotted manure, compost, and vermicast to dramatically improve moisture-holding capacity and nutrient retention. Apply thick mulch (rice straw or dried grass) over planting beds to slow water evaporation.",
+      "crops": [
+        "Watermelon",
+        "Peanut",
+        "Sweet Potato",
+        "Cassava",
+        "Radish",
+        "Carrot",
+        "Onion",
+        "Garlic"
+      ]
     }
   ]
 }

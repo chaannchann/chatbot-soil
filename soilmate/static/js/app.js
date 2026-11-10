@@ -347,11 +347,9 @@ async function sendMessage(text) {
         appendMessage('bot', data.reply);
         appendSuggestions(data.suggestions);
 
-        // Signed-in chats are saved, so clearing history becomes available.
+        // Signed-in chats are saved, so refresh the sidebar history list.
         if (isAuthenticatedUser) {
-            hasSavedChats = true;
-            setClearHistoryVisible(true);
-            fetchHistory().then(d => { if (d && d.conversations) renderConversations(d.conversations); });
+            refreshHistory();
         }
     } catch (err) {
         appendMessage('bot', chatLanguage === 'tl'
@@ -415,8 +413,6 @@ function clearImageSelection() {
 }
 
 // Image Analysis Trigger (sidebar button and chat camera button share this)
-// Image Analysis Trigger (sidebar button and chat camera button share this)
-// Image Analysis Trigger (sidebar button and chat camera button share this)
 async function analyzeSelectedImage() {
     if (!selectedFile) return;
 
@@ -425,6 +421,9 @@ async function analyzeSelectedImage() {
     // 1. Save file to a local variable FIRST before clearing the sidebar UI
     const fileToUpload = selectedFile;
     clearImageSelection();
+
+    // A scan is just another message in the conversation that is currently
+    // open. Only "New chat" starts a separate history entry.
 
     // 2. Show the photo in the chat bubble
     const previewUrl = URL.createObjectURL(fileToUpload);
@@ -458,6 +457,7 @@ async function analyzeSelectedImage() {
     const formData = new FormData();
     formData.append('image', fileToUpload);
     formData.append('session_id', SESSION_ID);
+    formData.append('conversation_id', CONVERSATION_ID);
 
     try {
         const res = await fetch('/api/predict-soil', {
@@ -478,14 +478,14 @@ async function analyzeSelectedImage() {
 
         if (data.identified === false) {
             appendMessage('bot', renderUnidentifiedCard(data), true);
-            refreshScans();
+            refreshHistory();
             return;
         }
 
         lastSoilType = data.soil_type;
         const cardHtml = renderSoilAnalysisCard(data);
         appendMessage('bot', cardHtml, true);
-        refreshScans();
+        refreshHistory();
 
     } catch (err) {
         if (loadingWrapper.parentNode) {
@@ -705,17 +705,21 @@ sidebarOpenBtn.addEventListener('click', openSidebar);
 sidebarCloseBtn.addEventListener('click', closeSidebar);
 sidebarBackdrop.addEventListener('click', closeSidebar);
 
-// Start a fresh conversation: clear the feed back to the welcome bubble and
-// rotate the session id so earlier soil/context does not carry over.
-function startNewChat() {
+// Start a fresh conversation: rotate the ids and clear the feed back to the
+// welcome bubble. The old conversation stays saved in the sidebar.
+function beginConversation() {
     SESSION_ID = createSessionId();
     localStorage.setItem('soilmate_session', SESSION_ID);
     CONVERSATION_ID = createSessionId();
     localStorage.setItem(CONVERSATION_KEY, CONVERSATION_ID);
     lastSoilType = null;
-    clearImageSelection(); // <--- ADD THIS LINE
     resetFeed();
     highlightActiveConversation();
+}
+
+function startNewChat() {
+    beginConversation();
+    clearImageSelection();
     userInput.value = '';
     closeSidebar();
     userInput.focus();
@@ -751,7 +755,7 @@ const QUICK_PROMPTS = {
         { label: 'Ano ang puwedeng itanim ngayong buwan?', action: 'plant' },
         { label: 'Paano i-test ang pH?', text: 'Paano ko susuriin ang pH ng lupa?' },
         { label: 'Paano gumawa ng compost?', text: 'Paano gumawa ng compost?' },
-        { label: 'Best organic fertilizer?', text: 'Ano ang pinakamagandang organic fertilizer para sa buhangin na lupa sa Pilipinas?' },
+        { label: 'Pinakamagandang organic fertilizer?', text: 'Ano ang pinakamagandang organic fertilizer para sa buhangin na lupa sa Pilipinas?' },
         { label: 'Iskedyul ng pagdidilig', text: 'Gaano kadalas akong magdidilig ng halaman?' },
     ],
 };
@@ -823,67 +827,6 @@ if (langToggleBtn) {
 }
 
 applyLanguage();
-
-// ------------------------- SCAN & CHAT HISTORY -------------------------
-const scanHistoryEl = document.getElementById('scanHistory');
-const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-
-// Whether the signed-in account has at least one saved chat message.
-let hasSavedChats = false;
-
-function setClearHistoryVisible(visible) {
-    if (!clearHistoryBtn) return;
-    clearHistoryBtn.classList.toggle('hidden', !visible);
-    clearHistoryBtn.classList.toggle('inline-flex', visible);
-}
-
-function renderScanHistory(scans, hasChats = hasSavedChats) {
-    const hasScans = !!(scans && scans.length);
-    setClearHistoryVisible(hasScans || hasChats);
-
-    if (!hasScans) {
-        scanHistoryEl.innerHTML = '<p class="text-xs text-emerald-400">No scans yet.</p>';
-        return;
-    }
-
-    scanHistoryEl.innerHTML = scans.map(s => {
-        const label = escapeHtml(s.identified ? s.predicted_soil : 'Unidentified');
-        const pct = Math.round((s.confidence || 0) * 100);
-        const date = new Date(s.created_at).toLocaleDateString();
-        return `
-            <div class="scan-item relative" data-scan-id="${s.id}">
-                <button type="button"
-                        class="scan-open w-full flex items-center gap-2 bg-emerald-800/60 hover:bg-emerald-800 rounded-lg p-2 pr-9 text-left transition"
-                        data-scan-id="${s.id}">
-                    <img src="/static/uploads/${encodeURIComponent(s.filename)}" alt=""
-                         class="w-10 h-10 object-cover rounded flex-shrink-0">
-                    <span class="flex-1 min-w-0">
-                        <span class="block text-xs font-semibold text-white truncate">${label}</span>
-                        <span class="block text-[11px] text-emerald-300">${pct}% • ${date}</span>
-                    </span>
-                </button>
-                <button type="button"
-                        class="scan-menu-btn absolute top-1.5 right-1.5 p-1 rounded-md text-emerald-200/70 hover:text-white hover:bg-white/15 transition"
-                        data-scan-menu="${s.id}" aria-label="Options for this scan"
-                        aria-haspopup="true" aria-expanded="false">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <circle cx="12" cy="5" r="1.7"/>
-                        <circle cx="12" cy="12" r="1.7"/>
-                        <circle cx="12" cy="19" r="1.7"/>
-                    </svg>
-                </button>
-                <div class="scan-menu hidden absolute right-1.5 top-8 z-20 w-36 rounded-lg bg-white border border-slate-200 shadow-lg py-1"
-                     data-scan-menu-panel="${s.id}">
-                    <button type="button"
-                            class="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition"
-                            data-delete-scan="${s.id}">
-                        Delete scan
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
 
 // ------------------------- CONVERSATION HISTORY RENDERING -------------------------
 function highlightActiveConversation() {
@@ -1013,8 +956,7 @@ async function deleteSingleConversation(convoId) {
             startNewChat();
         }
 
-        const hist = await fetchHistory();
-        if (hist && hist.conversations) renderConversations(hist.conversations);
+        await refreshHistory();
     } catch (err) {
         appendMessage('bot', `Failed to delete conversation: ${err.message}`);
     }
@@ -1037,13 +979,58 @@ if (clearChatsBtn) {
             }
 
             startNewChat();
-            renderConversations([]);
+            await refreshHistory();
         } catch (err) {
             appendMessage('bot', `Failed to clear chats: ${err.message}`);
         } finally {
             clearChatsBtn.disabled = false;
         }
     });
+}
+
+// Scan turns are stored in chat_logs with intent "scan:<id>". When a saved
+// conversation is reopened, fetch the scan so the photo and result card can be
+// rebuilt instead of showing the plain fallback text.
+function scanIdFromMessage(message) {
+    const intent = message && message.intent ? String(message.intent) : '';
+    return intent.startsWith('scan:') ? intent.slice('scan:'.length) : null;
+}
+
+function fetchScanForReplay(scanId, cache) {
+    if (cache.has(scanId)) return cache.get(scanId);
+
+    const promise = fetch(`/api/scans/${encodeURIComponent(scanId)}`)
+        .then(async (res) => (res.ok ? await res.json() : null))
+        .catch(() => null);
+
+    cache.set(scanId, promise);
+    return promise;
+}
+
+function appendSavedScanPhoto(scan) {
+    if (!scan || !scan.filename) return;
+
+    const photoHtml = `
+        <div class="space-y-1.5">
+            <img src="/static/uploads/${encodeURIComponent(scan.filename)}" alt="Saved soil sample"
+                 class="w-48 sm:w-64 h-36 sm:h-48 object-cover rounded-xl shadow-md border border-white/20">
+            <p class="text-[11px] text-emerald-100/90 font-semibold">📷 Saved soil sample</p>
+        </div>
+    `;
+    appendMessage('user', photoHtml, true);
+}
+
+function appendSavedScanResult(scan, fallbackMessage) {
+    if (!scan) return;
+
+    if (scan.identified === false) {
+        const pct = ((scan.confidence || 0) * 100).toFixed(1);
+        const message = escapeHtml(fallbackMessage || scan.message || 'This scan could not be identified.');
+        appendMessage('bot', `<strong>Previous scan could not be identified.</strong><br>${message}<br><span class="text-xs text-slate-400">Confidence: ${pct}%</span>`, true);
+        return;
+    }
+
+    appendMessage('bot', renderSoilAnalysisCard(scan), true);
 }
 
 async function openConversation(convoId) {
@@ -1054,7 +1041,7 @@ async function openConversation(convoId) {
 
         if (!res.ok || data.error) {
             console.error('Could not load conversation:', data.error);
-            return;
+            return false;
         }
 
         CONVERSATION_ID = convoId;
@@ -1062,63 +1049,36 @@ async function openConversation(convoId) {
         highlightActiveConversation();
 
         resetFeed();
-        (data.messages || []).forEach(m => {
+        lastSoilType = null;
+        const scanCache = new Map();
+        for (const m of data.messages || []) {
+            const scanId = scanIdFromMessage(m);
+            if (scanId) {
+                const scan = await fetchScanForReplay(scanId, scanCache);
+                if (scan) {
+                    if (m.role === 'user') appendSavedScanPhoto(scan);
+                    else appendSavedScanResult(scan, m.message);
+
+                    if (scan.identified && scan.soil_type) lastSoilType = scan.soil_type;
+                    continue;
+                }
+            }
+
             appendMessage(m.role === 'user' ? 'user' : 'bot', m.message);
-        });
+        }
+
+        return true;
     } catch (err) {
         console.error('Failed to open conversation:', err);
+        return false;
     }
 }
-
-function closeScanMenus() {
-    scanHistoryEl.querySelectorAll('[data-scan-menu-panel]').forEach(panel => {
-        panel.classList.add('hidden');
-    });
-    scanHistoryEl.querySelectorAll('[data-scan-menu]').forEach(btn => {
-        btn.setAttribute('aria-expanded', 'false');
-    });
-}
-
-scanHistoryEl.addEventListener('click', (event) => {
-    const menuBtn = event.target.closest('[data-scan-menu]');
-    if (menuBtn) {
-        const id = menuBtn.dataset.scanMenu;
-        const panel = scanHistoryEl.querySelector(`[data-scan-menu-panel="${id}"]`);
-        const willOpen = !!panel && panel.classList.contains('hidden');
-        closeScanMenus();
-        if (willOpen) {
-            panel.classList.remove('hidden');
-            menuBtn.setAttribute('aria-expanded', 'true');
-        }
-        return;
-    }
-
-    const deleteBtn = event.target.closest('[data-delete-scan]');
-    if (deleteBtn) {
-        closeScanMenus();
-        deleteSingleScan(deleteBtn.dataset.deleteScan);
-        return;
-    }
-
-    const openBtn = event.target.closest('.scan-open');
-    if (openBtn) {
-        closeScanMenus();
-        openScan(openBtn.dataset.scanId);
-    }
-});
-
-// Any click elsewhere, or Escape, dismisses an open row menu.
-document.addEventListener('click', (event) => {
-    if (!scanHistoryEl.contains(event.target)) closeScanMenus();
-});
-
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeScanMenus();
-});
 
 function renderHistoryLoginPrompt() {
-    setClearHistoryVisible(false);
-    scanHistoryEl.innerHTML = `
+    setClearChatsVisible(false);
+    if (!chatHistoryEl) return;
+
+    chatHistoryEl.innerHTML = `
         <div class="rounded-xl border border-dashed border-white/15 py-4 px-3 text-center space-y-2">
             <p class="text-xs text-emerald-100/60">Log in to save your scan and chat history.</p>
             <button id="historyLoginBtn" type="button"
@@ -1137,121 +1097,6 @@ function renderHistoryLoginPrompt() {
     }
 }
 
-async function openScan(scanId) {
-    closeSidebar();
-    try {
-        const res = await fetch(`/api/scans/${scanId}`);
-        const data = await res.json();
-
-        if (res.status === 401) {
-            renderHistoryLoginPrompt();
-            showGate('login');
-            appendMessage('bot', 'Please log in to view saved scans.', true);
-            return;
-        }
-
-        if (!res.ok || data.error) {
-            appendMessage('bot', `<strong>Could not open scan:</strong> ${data.error || 'Unknown error'}`, true);
-            return;
-        }
-
-        // 1. Clean the feed so previous chats don't linger
-        resetFeed();
-
-        // 2. Display the saved photo if available
-        if (data.filename) {
-            const photoHtml = `
-                <div class="space-y-1.5">
-                    <img src="/static/uploads/${encodeURIComponent(data.filename)}" alt="Saved scan photo"
-                         class="w-48 sm:w-64 h-36 sm:h-48 object-cover rounded-xl shadow-md border border-white/20">
-                    <p class="text-[11px] text-emerald-100/90 font-semibold">📷 Saved soil sample</p>
-                </div>
-            `;
-            appendMessage('user', photoHtml, true);
-        }
-
-        // 3. Render the specific result card
-        if (data.identified === false) {
-            const pct = ((data.confidence || 0) * 100).toFixed(1);
-            appendMessage('bot', `<strong>Previous scan could not be identified.</strong><br>${data.message}<br><span class="text-xs text-slate-400">Confidence: ${pct}%</span>`, true);
-            return;
-        }
-
-        lastSoilType = data.soil_type;
-        appendMessage('bot', renderSoilAnalysisCard(data), true);
-    } catch (err) {
-        appendMessage('bot', `Failed to open scan: ${err.message}`);
-    }
-}
-
-async function deleteSingleScan(scanId) {
-    const confirmed = window.confirm(
-        'Delete this scan from your history?\n\nThis cannot be undone.'
-    );
-    if (!confirmed) return;
-
-    try {
-        const res = await fetch(`/api/scans/${scanId}`, { method: 'DELETE' });
-        let data = {};
-        try { data = await res.json(); } catch (err) { /* empty body */ }
-
-        if (res.status === 401) {
-            renderHistoryLoginPrompt();
-            showGate('login');
-            return;
-        }
-
-        if (!res.ok || !data.deleted) {
-            appendMessage('bot', `<strong>Could not delete scan:</strong> ${data.error || 'Please try again.'}`, true);
-            return;
-        }
-
-        await refreshScans();
-        appendMessage('bot', 'That scan has been removed from your history.');
-    } catch (err) {
-        appendMessage('bot', `Failed to delete scan: ${err.message}`);
-    }
-}
-
-async function clearHistory() {
-    const confirmed = window.confirm(
-        'Delete all your saved scans and chat history?\n\nThis cannot be undone.'
-    );
-    if (!confirmed) return;
-
-    clearHistoryBtn.disabled = true;
-    try {
-        const res = await fetch('/api/history', { method: 'DELETE' });
-        let data = {};
-        try { data = await res.json(); } catch (err) { /* empty body */ }
-
-        if (res.status === 401) {
-            renderHistoryLoginPrompt();
-            showGate('login');
-            return;
-        }
-
-        if (!res.ok || !data.deleted) {
-            appendMessage('bot', `<strong>Could not clear history:</strong> ${data.error || 'Please try again.'}`, true);
-            return;
-        }
-
-        hasSavedChats = false;
-        lastSoilType = null;
-        resetFeed();
-        renderScanHistory([]);
-        renderConversations([]);
-    } catch (err) {
-        appendMessage('bot', `Failed to clear history: ${err.message}`);
-    } finally {
-        clearHistoryBtn.disabled = false;
-    }
-}
-
-if (clearHistoryBtn) {
-    clearHistoryBtn.addEventListener('click', clearHistory);
-}
-
 async function fetchHistory() {
     try {
         const res = await fetch(`/api/history?session_id=${SESSION_ID}`);
@@ -1263,14 +1108,14 @@ async function fetchHistory() {
     }
 }
 
-async function refreshScans() {
+async function refreshHistory() {
     const data = await fetchHistory();
     if (!data) return;
     if (data.requires_login) {
         renderHistoryLoginPrompt();
         return;
     }
-    renderScanHistory(data.scans);
+    renderConversations(data.conversations);
 }
 
 async function loadHistory() {
@@ -1282,8 +1127,6 @@ async function loadHistory() {
         return;
     }
 
-    hasSavedChats = !!(data.chats && data.chats.length);
-    renderScanHistory(data.scans, hasSavedChats);
     renderConversations(data.conversations);
 
     // If an active conversation exists in localStorage, open only THAT conversation

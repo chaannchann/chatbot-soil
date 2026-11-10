@@ -19,7 +19,9 @@ from history import (
     recent_scans,
     recent_chats,
     recent_conversations,
+    ensure_scan_conversations,
     conversation_messages,
+    conversation_for_scan,
     get_scan,
     delete_scan,
     delete_user_history,
@@ -80,6 +82,29 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'bmp'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def record_scan_turn(session_id, conversation_id, user_id, scan_id,
+                     user_message, bot_message, confidence=None):
+    """Save a photo upload and its result as chat turns.
+
+    The scan id is stored in the ``intent`` column as ``scan:<id>`` so the
+    frontend can rebuild the photo and analysis card when a saved conversation
+    is reopened. Guests do not get saved scans, so there is nothing to log.
+    """
+    if user_id is None or not scan_id:
+        return
+
+    log_chat(
+        session_id, 'user', user_message,
+        intent=f"scan:{scan_id}", user_id=user_id,
+        conversation_id=conversation_id,
+    )
+    log_chat(
+        session_id, 'bot', bot_message,
+        intent=f"scan:{scan_id}", confidence=confidence,
+        user_id=user_id, conversation_id=conversation_id,
+    )
 
 
 # ----------------- AVATARS -----------------
@@ -427,6 +452,8 @@ def predict_soil():
         return jsonify({'error': 'Unsupported file type. Please upload a PNG or JPG image.'}), 400
 
     user_id = current_user_id()
+    session_id = request.form.get('session_id')
+    conversation_id = (request.form.get('conversation_id') or '').strip()[:64] or None
 
     safe_name = secure_filename(file.filename)
     stored_name = f"{uuid.uuid4().hex}_{safe_name}"
@@ -440,8 +467,12 @@ def predict_soil():
         quality = assess_image(image)
         if not quality["ok"]:
             scan_id = (
-                log_scan(None, stored_name, None, 0.0, False, user_id=user_id)
+                log_scan(session_id, stored_name, None, 0.0, False, user_id=user_id)
                 if user_id is not None else None
+            )
+            record_scan_turn(
+                session_id, conversation_id, user_id, scan_id,
+                'Soil scan', quality['message'], confidence=0.0,
             )
             return jsonify({
                 'identified': False,
@@ -469,8 +500,16 @@ def predict_soil():
         # If confidence is below threshold OR distribution is flat/ambiguous
         if confidence < CONFIDENCE_THRESHOLD or uncertainty > 0.92:
             scan_id = (
-                log_scan(None, stored_name, predicted_raw, confidence, False, user_id=user_id)
+                log_scan(session_id, stored_name, predicted_raw, confidence, False, user_id=user_id)
                 if user_id is not None else None
+            )
+            low_confidence_message = (
+                "I cannot identify this soil type with certainty. "
+                "Please upload a clearer close-up of the soil surface."
+            )
+            record_scan_turn(
+                session_id, conversation_id, user_id, scan_id,
+                'Soil scan', low_confidence_message, confidence=confidence,
             )
             return jsonify({
                 'identified': False,
@@ -479,15 +518,22 @@ def predict_soil():
                 'filename': stored_name,
                 'confidence': confidence,
                 'uncertainty': round(uncertainty, 3),
-                'message': "I cannot identify this soil type with certainty. Please upload a clearer close-up of the soil surface.",
+                'message': low_confidence_message,
                 'tips': TIPS,
             })
 
         # 4. Fetch details from PostgreSQL
         details = soil_details(predicted_raw)
         scan_id = (
-            log_scan(None, stored_name, details['display_name'], confidence, True, user_id=user_id)
+            log_scan(session_id, stored_name, details['display_name'], confidence, True, user_id=user_id)
             if user_id is not None else None
+        )
+        soil_label = details['display_name'] or 'Soil'
+        record_scan_turn(
+            session_id, conversation_id, user_id, scan_id,
+            f"{soil_label} scan",
+            f"{soil_label} detected with {confidence:.0%} confidence.",
+            confidence=confidence,
         )
 
         # Special note if Concrete is detected
@@ -540,11 +586,14 @@ def history_endpoint():
             'chats': chat_count,
         })
 
+    # Older scans predate scan conversations, so give them one before listing.
+    ensure_scan_conversations(user_id)
+
     # Logged-in accounts: include 'chats' so app.js can replay previous messages
     return jsonify({
         'scans': recent_scans(user_id=user_id, limit=12),
         'conversations': recent_conversations(user_id=user_id, limit=20),
-        'chats': recent_chats(user_id=user_id, limit=40),  # <--- ADD THIS LINE
+        'chats': recent_chats(user_id=user_id, limit=40),
         'requires_login': False,
     })
 
@@ -559,9 +608,17 @@ def conversation_detail(conversation_id):
     conversation_id = (conversation_id or '').strip()[:64]
 
     if request.method == 'DELETE':
-        deleted_count = delete_conversation(user_id, conversation_id)
+        deleted_count, filenames = delete_conversation(user_id, conversation_id)
         if not deleted_count:
             return jsonify({'error': 'Conversation not found.'}), 404
+
+        for filename in filenames:
+            path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(filename))
+            try:
+                os.remove(path)
+            except OSError:
+                pass  # already gone
+
         return jsonify({'deleted': True, 'conversation_id': conversation_id, 'count': deleted_count})
 
     messages = conversation_messages(user_id, conversation_id)
@@ -581,7 +638,14 @@ def clear_all_chats():
     if user_id is None:
         return jsonify({'error': 'Please log in first.'}), 401
 
-    count = delete_all_chats(user_id)
+    count, filenames = delete_all_chats(user_id)
+    for filename in filenames:
+        path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(filename))
+        try:
+            os.remove(path)
+        except OSError:
+            pass  # already gone
+
     return jsonify({'deleted': True, 'chats': count})
 
 
@@ -614,10 +678,13 @@ def scan_detail(scan_id):
     if not scan:
         return jsonify({'error': 'Scan not found'}), 404
 
+    conversation_id = conversation_for_scan(scan_id, user_id)
+
     if not scan['identified'] or not scan['predicted_soil']:
         return jsonify({
             'identified': False,
             'scan_id': scan['id'],
+            'conversation_id': conversation_id,
             'filename': scan['filename'],
             'confidence': scan['confidence'] or 0,
             'message': "This scan could not be identified with enough confidence.",
@@ -627,6 +694,7 @@ def scan_detail(scan_id):
     return jsonify({
         'identified': True,
         'scan_id': scan['id'],
+        'conversation_id': conversation_id,
         'filename': scan['filename'],
         'soil_type': details['display_name'],
         'confidence': scan['confidence'],
